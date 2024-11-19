@@ -5,7 +5,8 @@ from users.models import *
 from rest_framework import serializers
 from .models import Product, Category, ProductImage
 from django.core.exceptions import ValidationError
-
+from django.core.files.base import ContentFile
+from django.core.files.uploadedfile import InMemoryUploadedFile
 
 
 class FarmerSerializer(serializers.ModelSerializer):
@@ -57,6 +58,54 @@ class ProductSerializer(serializers.ModelSerializer):
         return representation
 
 
+# class ProductCreateSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = Product
+#         fields = [
+#             "name",
+#             "description",
+#             "price",
+#             "quantity_available",
+#             "category",
+#             "images",
+#             "popularity",  # Include popularity in the fields
+#             "farmer",  # Include farmer in the fields (though this will be set in the view)
+#         ]
+#         read_only_fields = ["farmer"]  # Make sure 'farmer' is read-only
+
+#     def create(self, validated_data):
+#         """Handle image resizing, farmer assignment, and product creation."""
+#         images_data = validated_data.pop("images", [])
+#         # Extract the farmer from the user who is making the request
+#         user = self.context["request"].user
+#         farmer = (
+#             user.farmer_profile
+#         )  # Assuming you have a relationship between User and Farmer
+
+#         # Add the farmer to the validated data
+#         validated_data["farmer"] = farmer
+#         product = Product.objects.create(**validated_data)
+#         image_instances = []
+#         for image in images_data:
+#             # Create ProductImage instances and link to product
+#             if isinstance(image, bytes):
+#                 # Create a ContentFile with raw bytes
+#                 image_name = "uploaded_image.jpg"  # You can use a default name or generate a unique name
+#                 image = ContentFile(image, name=image_name)  # Assign a name here
+#                 image_instances.append(product_image)
+#             # Create ProductImage instance
+#             product_image = ProductImage(image=image)
+#             try:
+#                 product_image.clean()  # Validate the image (size, format)
+#                 product_image.save()  # Resize and save the image
+#                 # product.images.add(product_image)  # Add image to the product
+#                 product.images.set(image_instances)
+#             except ValidationError as e:
+#                 raise serializers.ValidationError(str(e))
+
+#         return product
+
+
 class ProductCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
@@ -66,22 +115,54 @@ class ProductCreateSerializer(serializers.ModelSerializer):
             "price",
             "quantity_available",
             "category",
-            "images",
+            "image",
+            "popularity",
+            "farmer",  # Include farmer in the fields (though this will be set in the view)
         ]
+        read_only_fields = ["farmer"]  # Make sure 'farmer' is read-only
 
     def create(self, validated_data):
-        """Handle image resizing and creation."""
-        images_data = validated_data.pop('images', [])
+        """Handle image resizing, farmer assignment, and product creation."""
+        images_data = validated_data.pop("images", [])
+
+        # Extract the farmer from the user who is making the request
+        user = self.context["request"].user
+        farmer = (
+            user.farmer_profile
+        )  # Assuming you have a relationship between User and Farmer
+
+        # Add the farmer to the validated data
+        validated_data["farmer"] = farmer
+
         product = Product.objects.create(**validated_data)
 
-        for image in images_data:
-            # Create ProductImage instances and link to product
-            product_image = ProductImage(image=image)
-            try:
-                product_image.clean()  # Validate the image (size, format)
-                product_image.save()   # Resize and save the image
-                product.images.add(product_image)  # Add image to the product
-            except ValidationError as e:
-                raise serializers.ValidationError(str(e))
+        # Resize the image
+        if validated_data.get("image"):
+            resized_image = product.resize_image(validated_data["image"])
+            product.image = resized_image  # Assign resized image to the product
+
+        product.save()  # Save product with resized image
 
         return product
+        # print("lol")
+        # # Create the product
+        # product = Product.objects.create(**validated_data)
+
+        # # Create ProductImage instances and link them to the product
+        # image_instances = []
+        # for image in images_data:
+        #     if isinstance(image, InMemoryUploadedFile):
+        #         # Create a new ProductImage instance for each image
+        #         # product_image = ProductImage(image=image)
+        #         try:
+        #             product.clean()  # Validate the image (size, format)
+        #             product.save()  # Save the image and generate the file
+        #             # image_instances.append(
+        #             #     product_image
+        #             # )  # Add the ProductImage instance to the list
+        #         except ValidationError as e:
+        #             raise serializers.ValidationError(str(e))
+
+        # # Associate the image instances with the product
+        # # product.images.set(image_instances)  # Many-to-many relationship assignment
+        # return product

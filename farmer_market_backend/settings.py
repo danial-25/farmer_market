@@ -38,7 +38,7 @@ REST_FRAMEWORK = {
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 10,
     "DEFAULT_AUTHENTICATION_CLASSES": (
-        "rest_framework.authentication.BasicAuthentication",
+        # "rest_framework.authentication.BasicAuthentication",
         "rest_framework.authentication.SessionAuthentication",
         "rest_framework.authentication.TokenAuthentication",
     ),
@@ -97,11 +97,11 @@ WSGI_APPLICATION = "farmer_market_backend.wsgi.application"
 
 
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
-    }
-    # "default": dj_database_url.parse(config["DATABASE_URL"])
+    # "default": {
+    #     "ENGINE": "django.db.backends.sqlite3",
+    #     "NAME": BASE_DIR / "db.sqlite3",
+    # }
+    "default": dj_database_url.parse(config["DATABASE_URL"])
 }
 
 

@@ -5,6 +5,8 @@ from django.core.exceptions import ValidationError
 from PIL import Image
 from io import BytesIO
 from django.core.files.uploadedfile import InMemoryUploadedFile
+import hashlib
+from django.core.files.base import ContentFile
 
 
 class Farmer(models.Model):
@@ -27,6 +29,24 @@ class Category(models.Model):
         return self.name
 
 
+class ProductImage(models.Model):
+    image = models.ImageField(upload_to="product_images/")
+
+    # def clean(self):
+    #     """Validate the image file."""
+    #     print(self.image.name)
+    #     if not self.image.name.lower().endswith((".png", ".jpg", ".jpeg")):
+    #         raise ValidationError("Only PNG, JPG, and JPEG image formats are allowed.")
+    #     if self.image.size > 5 * 1024 * 1024:  # 5MB limit
+    #         raise ValidationError("Image size must be less than 5MB.")
+
+    # def save(self, *args, **kwargs):
+    #     """Resize image before saving."""
+    #     if self.image:
+    #         self.image = resize_image(self.image)
+    #     super().save(*args, **kwargs)
+
+
 class Product(models.Model):
     name = models.CharField(max_length=255)
     description = models.TextField()
@@ -34,7 +54,7 @@ class Product(models.Model):
     popularity = models.PositiveIntegerField(
         validators=[MinValueValidator(0), MaxValueValidator(100)]
     )
-    is_active = models.BooleanField(default=True)
+    # is_active = models.BooleanField(default=True)
     quantity_available = models.PositiveIntegerField()
     category = models.ForeignKey(
         Category, on_delete=models.CASCADE, related_name="products"
@@ -43,7 +63,22 @@ class Product(models.Model):
         Farmer, on_delete=models.CASCADE, related_name="products"
     )
     date_added = models.DateTimeField(auto_now_add=True)
-    images = models.ImageField(upload_to="product_images/", null=True, blank=True)
+    image = models.ImageField(upload_to="product_images/", null=True, blank=True)
+    # images = models.JSONField(default=list)
+    # images = models.ManyToManyField(ProductImage, blank=True)
+
+    pid = models.CharField(max_length=64, editable=False, null=True)
+
+    def generate_pid(self):
+        """Generate a consistent hash for core product attributes."""
+        unique_string = f"{self.name}-{self.description}-{self.category}"
+        return hashlib.sha256(unique_string.encode("utf-8")).hexdigest()
+
+    def save(self, *args, **kwargs):
+        """Ensure the pid is generated before saving."""
+        if not self.pid:
+            self.pid = self.generate_pid()
+        super().save(*args, **kwargs)
 
     def is_low_stock(self):
         return self.quantity_available < 5
@@ -66,6 +101,38 @@ class Product(models.Model):
         """Remove product from the marketplace (deactivate or delete)."""
         self.delete()
 
+    def save(self, *args, **kwargs):
+        """Ensure the pid is generated before saving and resize image."""
+        if not self.pid:
+            self.pid = self.generate_pid()
+
+        # Resize image before saving
+        if self.image:
+            self.image = self.resize_image(self.image)
+
+        super().save(*args, **kwargs)
+
+    def resize_image(self, image):
+        """Resize image to fit the required size and convert to RGB if necessary."""
+        img = Image.open(image)
+
+        # If the image has an alpha channel (RGBA), convert it to RGB
+        if img.mode == "RGBA":
+            img = img.convert("RGB")
+
+        # Resize image to fit within 800x800
+        img.thumbnail((800, 800))  # Resize to max 800x800
+
+        # Save resized image to a BytesIO stream
+        output = BytesIO()
+        img.save(output, format="JPEG")
+        output.seek(0)
+
+        # Create and return InMemoryUploadedFile for resized image
+        return InMemoryUploadedFile(
+            output, "ImageField", image.name, "image/jpeg", output.tell(), None
+        )
+
 
 def resize_image(image, max_size=(800, 800)):
     """Resize the image to the specified size."""
@@ -76,20 +143,54 @@ def resize_image(image, max_size=(800, 800)):
     img.save(output, format="JPEG")
     output.seek(0)
 
-    return InMemoryUploadedFile(output, "ImageField", image.name, 'image/jpeg', output.tell(), None)
+    return InMemoryUploadedFile(
+        output, "ImageField", image.name, "image/jpeg", output.tell(), None
+    )
 
 
-class ProductImage(models.Model):
-    image = models.ImageField(upload_to="product_images/")
-    def clean(self):
-        """Validate the image file."""
-        if not self.image.name.lower().endswith(('.png', '.jpg', '.jpeg')):
-            raise ValidationError("Only PNG, JPG, and JPEG image formats are allowed.")
-        if self.image.size > 5 * 1024 * 1024:  # 5MB limit
-            raise ValidationError("Image size must be less than 5MB.")
+# class ProductImage(models.Model):
+#     image = models.ImageField(upload_to="product_images/")
 
-    def save(self, *args, **kwargs):
-        """Resize image before saving."""
-        if self.image:
-            self.image = resize_image(self.image)
-        super().save(*args, **kwargs)
+#     def clean(self):
+#         """Validate the image file."""
+#         print(self.image.name)
+#         if not self.image.name.lower().endswith((".png", ".jpg", ".jpeg")):
+#             raise ValidationError("Only PNG, JPG, and JPEG image formats are allowed.")
+#         if self.image.size > 5 * 1024 * 1024:  # 5MB limit
+#             raise ValidationError("Image size must be less than 5MB.")
+
+#     def save(self, *args, **kwargs):
+#         """Resize image before saving."""
+#         if self.image:
+#             self.image = resize_image(self.image)
+#         super().save(*args, **kwargs)
+
+
+# class ProductImage(models.Model):
+#     image = models.ImageField(upload_to="product_images/")
+
+#     def clean(self):
+#         """Validate the image file."""
+#         # If the image is passed as bytes, convert it into a file object
+#         if isinstance(self.image, bytes):
+#             self.image = ContentFile(self.image)
+#         print(self.image.size)
+#         if hasattr(self.image, "name"):
+#             # Validate file extension
+#             if not self.image.name.lower().endswith((".png", ".jpg", ".jpeg")):
+#                 raise ValidationError(
+#                     "Only PNG, JPG, and JPEG image formats are allowed."
+#                 )
+
+#             # Validate image size (5MB limit)
+#             if self.image.size > 5 * 1024 * 1024:  # 5MB limit
+#                 raise ValidationError("Image size must be less than 5MB.")
+#         else:
+#             raise ValidationError("Invalid image format.")
+
+#     def save(self, *args, **kwargs):
+#         """Resize image before saving."""
+#         if isinstance(self.image, BytesIO):
+#             # Here you can use PIL or any other resizing logic if necessary
+#             self.image = resize_image(self.image)
+#         super().save(*args, **kwargs)

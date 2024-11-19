@@ -71,14 +71,16 @@ def single(request, id):
 @api_view(["POST"])
 @permission_classes([IsAuthenticatedOrReadOnly])
 def create_product(request):
-    if not request.user.is_authenticated:
+    print(request.user)
+    if not request.user.is_authenticated or not hasattr(request.user, "farmer_profile"):
         return Response(
             {"detail": "Authentication required."}, status=status.HTTP_403_FORBIDDEN
         )
-
+    print("lol")
     serializer = ProductCreateSerializer(
         data=request.data, context={"request": request}
     )
+
     if serializer.is_valid():
         serializer.save()
         return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -89,6 +91,8 @@ def create_product(request):
 @permission_classes([IsAuthenticatedOrReadOnly])
 def farmer_dashboard(request):
     # Ensure the user is authenticated
+    # print(request.user.farmer_profile)
+    # print(Product.objects.filter(farmer=request.user.farmer_profile))
     if not request.user.is_authenticated:
         return Response(
             {"detail": "Authentication credentials were not provided."},
@@ -96,22 +100,19 @@ def farmer_dashboard(request):
         )
 
     # Ensure the user is a farmer
-    if not hasattr(request.user, "farmer"):
+    if not hasattr(request.user, "farmer_profile"):
         return Response(
             {"detail": "You are not authorized to access this dashboard."},
             status=status.HTTP_403_FORBIDDEN,
         )
 
-    farmer = request.user.farmer
-
-    # Fetch farmer's products
-    products = farmer.products.all()
+    products = Product.objects.filter(farmer=request.user.farmer_profile)
 
     # Low-stock notification logic
-    low_stock_products = products.filter(quantity_available__lt=10)
+    low_stock_products = products.filter(quantity_available__lt=1000)
 
     data = {
-        "farmer_name": farmer.name,
+        "farmer_name": request.user.farmer_profile.name,
         "total_products": products.count(),
         "low_stock_products": [
             {
@@ -130,7 +131,9 @@ def farmer_dashboard(request):
 def mark_out_of_stock(request, product_id):
     """Mark a product as out of stock."""
     try:
-        product = Product.objects.get(id=product_id, farmer=request.user.farmer)
+        product = Product.objects.get(
+            pid=product_id, farmer=request.user.farmer_profile
+        )
         product.mark_out_of_stock()  # Mark as out of stock
         return Response({"message": "Product marked as out of stock."}, status=200)
     except Product.DoesNotExist:
@@ -144,7 +147,9 @@ def mark_out_of_stock(request, product_id):
 def remove_product(request, product_id):
     """Remove a product from the marketplace."""
     try:
-        product = Product.objects.get(id=product_id, farmer=request.user.farmer)
+        product = Product.objects.get(
+            pid=product_id, farmer=request.user.farmer_profile
+        )
         product.remove_from_marketplace()  # Delete product
         return Response(
             {"message": "Product removed from the marketplace."}, status=200
@@ -158,9 +163,11 @@ def remove_product(request, product_id):
 @api_view(["DELETE"])
 @permission_classes([IsAuthenticated])
 def delete_product(request, product_id):
-    farmer = request.user.farmer
+    farmer = request.user.farmer_profile
     try:
-        product = farmer.products.get(id=product_id)
+        product = Product.objects.get(
+            pid=product_id, farmer=request.user.farmer_profile
+        )
         product.delete()
         return Response(
             {"message": "Product removed from the marketplace."}, status=200
@@ -172,9 +179,10 @@ def delete_product(request, product_id):
 @api_view(["PUT"])
 @permission_classes([IsAuthenticated])
 def update_product(request, product_id):
-    farmer = request.user.farmer
     try:
-        product = farmer.products.get(id=product_id)
+        product = Product.objects.get(
+            pid=product_id, farmer=request.user.farmer_profile
+        )
         data = request.data
         product.name = data.get("name", product.name)
         product.description = data.get("description", product.description)
