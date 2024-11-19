@@ -31,9 +31,11 @@ SECRET_KEY = config["SECRET_KEY"]
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
-
-
+CSRF_TRUSTED_ORIGINS = [
+    "https://farmer-market-33zm.onrender.com",
+    "http://127.0.0.1",
+    "http://localhost",
+]
 REST_FRAMEWORK = {
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 10,
