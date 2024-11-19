@@ -1,8 +1,11 @@
-from rest_framework import serializers
-from .models import Farmer, Category, Product
+from .models import Farmer
 from django.urls import reverse
 from rest_framework.reverse import reverse
 from users.models import *
+from rest_framework import serializers
+from .models import Product, Category, ProductImage
+from django.core.exceptions import ValidationError
+
 
 
 class FarmerSerializer(serializers.ModelSerializer):
@@ -67,9 +70,18 @@ class ProductCreateSerializer(serializers.ModelSerializer):
         ]
 
     def create(self, validated_data):
-        request = self.context.get("request")
-        if not request or not hasattr(request.user, "farmer"):
-            raise serializers.ValidationError("Only farmers can create products.")
+        """Handle image resizing and creation."""
+        images_data = validated_data.pop('images', [])
+        product = Product.objects.create(**validated_data)
 
-        farmer = request.user.farmer
-        return Product.objects.create(farmer=farmer, **validated_data)
+        for image in images_data:
+            # Create ProductImage instances and link to product
+            product_image = ProductImage(image=image)
+            try:
+                product_image.clean()  # Validate the image (size, format)
+                product_image.save()   # Resize and save the image
+                product.images.add(product_image)  # Add image to the product
+            except ValidationError as e:
+                raise serializers.ValidationError(str(e))
+
+        return product

@@ -1,3 +1,4 @@
+from rest_framework import status
 from rest_framework.response import Response
 from .models import *
 from django.shortcuts import get_object_or_404
@@ -8,6 +9,8 @@ from rest_framework.renderers import JSONRenderer, TemplateHTMLRenderer
 from rest_framework.reverse import reverse, reverse_lazy
 from .serializers import *
 from rest_framework import status, viewsets
+
+from .forms import ProductForm
 
 
 @api_view()
@@ -64,44 +67,122 @@ def single(request, id):
     return Response(serializer.data)
 
 
+# Create a new product (only accessible to authenticated farmers)
 @api_view(["POST"])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticatedOrReadOnly])
 def create_product(request):
-    print(request.user)
-    return Response(status=200)
+    if not request.user.is_authenticated:
+        return Response(
+            {"detail": "Authentication required."}, status=status.HTTP_403_FORBIDDEN
+        )
+
+    serializer = ProductCreateSerializer(
+        data=request.data, context={"request": request}
+    )
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-# class ProductViewSet(viewsets.ModelViewSet):
-#     serializer_class = ProductSerializer
-#     queryset = Product.objects.all()
-#     permission_classes = [IsAuthenticated]
+@api_view(["GET"])
+@permission_classes([IsAuthenticatedOrReadOnly])
+def farmer_dashboard(request):
+    # Ensure the user is authenticated
+    if not request.user.is_authenticated:
+        return Response(
+            {"detail": "Authentication credentials were not provided."},
+            status=status.HTTP_403_FORBIDDEN,
+        )
 
-#     def get_queryset(self):
-#         # Only return products belonging to the authenticated farmer
-#         return Product.objects.filter(farmer=self.request.user.farmer)
+    # Ensure the user is a farmer
+    if not hasattr(request.user, "farmer"):
+        return Response(
+            {"detail": "You are not authorized to access this dashboard."},
+            status=status.HTTP_403_FORBIDDEN,
+        )
 
-#     def perform_create(self, serializer):
-#         serializer.save(farmer=self.request.user.farmer)  # Assign the farmer to the product
+    farmer = request.user.farmer
 
-#     @action(detail=True, methods=['put'], permission_classes=[IsAuthenticated])
-#     def update_stock(self, request, pk=None):
-#         product = self.get_object()
-#         new_quantity = request.data.get("quantity_available")
-#         if new_quantity is not None:
-#             product.quantity_available = new_quantity
-#             product.save()
-#             return Response(ProductSerializer(product).data)
-#         return Response({"detail": "Quantity not provided."}, status=status.HTTP_400_BAD_REQUEST)
+    # Fetch farmer's products
+    products = farmer.products.all()
 
-#     @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
-#     def mark_out_of_stock(self, request, pk=None):
-#         product = self.get_object()
-#         product.quantity_available = 0
-#         product.save()
-#         return Response(ProductSerializer(product).data)
+    # Low-stock notification logic
+    low_stock_products = products.filter(quantity_available__lt=10)
 
-#     @action(detail=True, methods=['delete'], permission_classes=[IsAuthenticated])
-#     def delete_product(self, request, pk=None):
-#         product = self.get_object()
-#         product.delete()
-#         return Response({"message": "Product deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
+    data = {
+        "farmer_name": farmer.name,
+        "total_products": products.count(),
+        "low_stock_products": [
+            {
+                "id": product.id,
+                "name": product.name,
+                "quantity_available": product.quantity_available,
+            }
+            for product in low_stock_products
+        ],
+    }
+    return Response(data)
+
+
+@api_view(["PATCH"])
+@permission_classes([IsAuthenticatedOrReadOnly])
+def mark_out_of_stock(request, product_id):
+    """Mark a product as out of stock."""
+    try:
+        product = Product.objects.get(id=product_id, farmer=request.user.farmer)
+        product.mark_out_of_stock()  # Mark as out of stock
+        return Response({"message": "Product marked as out of stock."}, status=200)
+    except Product.DoesNotExist:
+        return Response(
+            {"error": "Product not found or you are not the owner."}, status=404
+        )
+
+
+@api_view(["DELETE"])
+@permission_classes([IsAuthenticatedOrReadOnly])
+def remove_product(request, product_id):
+    """Remove a product from the marketplace."""
+    try:
+        product = Product.objects.get(id=product_id, farmer=request.user.farmer)
+        product.remove_from_marketplace()  # Delete product
+        return Response(
+            {"message": "Product removed from the marketplace."}, status=200
+        )
+    except Product.DoesNotExist:
+        return Response(
+            {"error": "Product not found or you are not the owner."}, status=404
+        )
+
+
+@api_view(["DELETE"])
+@permission_classes([IsAuthenticated])
+def delete_product(request, product_id):
+    farmer = request.user.farmer
+    try:
+        product = farmer.products.get(id=product_id)
+        product.delete()
+        return Response(
+            {"message": "Product removed from the marketplace."}, status=200
+        )
+    except Product.DoesNotExist:
+        return Response({"detail": "Product not found."}, status=404)
+
+
+@api_view(["PUT"])
+@permission_classes([IsAuthenticated])
+def update_product(request, product_id):
+    farmer = request.user.farmer
+    try:
+        product = farmer.products.get(id=product_id)
+        data = request.data
+        product.name = data.get("name", product.name)
+        product.description = data.get("description", product.description)
+        product.price = data.get("price", product.price)
+        product.quantity_available = data.get(
+            "quantity_available", product.quantity_available
+        )
+        product.save()
+        return Response({"message": "Product updated successfully."}, status=200)
+    except Product.DoesNotExist:
+        return Response({"detail": "Product not found."}, status=404)
