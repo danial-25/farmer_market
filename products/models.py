@@ -1,14 +1,19 @@
 from django.db import models
 from django.core.validators import MaxValueValidator, MinValueValidator
+from users.models import *
 
 
 class Farmer(models.Model):
+    user = models.OneToOneField(
+        CustomUser,
+        on_delete=models.CASCADE,
+        related_name="farmer_profile",
+        null=True,  # Allow null values temporarily
+    )
     name = models.CharField(max_length=255)
     location = models.CharField(max_length=255)
     contact_info = models.TextField()
-
-    def __str__(self):
-        return self.name
+    is_approved = models.BooleanField(default=False)
 
 
 class Category(models.Model):
@@ -32,11 +37,11 @@ class Product(models.Model):
     farmer = models.ForeignKey(
         Farmer, on_delete=models.CASCADE, related_name="products"
     )
-    popularity = models.PositiveIntegerField(
-        default=0
-    )  # To enable sorting by popularity
     date_added = models.DateTimeField(auto_now_add=True)
     images = models.ImageField(upload_to="product_images/", null=True, blank=True)
+
+    def is_low_stock(self):
+        return self.quantity_available < 5
 
     def __str__(self):
         return self.name

@@ -1,13 +1,13 @@
 from rest_framework.response import Response
 from .models import *
 from django.shortcuts import get_object_or_404
-from django.shortcuts import get_object_or_404
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework.permissions import AllowAny, IsAdminUser
 from rest_framework.decorators import api_view, renderer_classes, permission_classes
 from rest_framework.renderers import JSONRenderer, TemplateHTMLRenderer
 from rest_framework.reverse import reverse, reverse_lazy
 from .serializers import *
+from rest_framework import status, viewsets
 
 
 @api_view()
@@ -62,3 +62,46 @@ def single(request, id):
     queryset = get_object_or_404(Product, id=id)
     serializer = ProductSerializer(queryset, context={"request": request})
     return Response(serializer.data)
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def create_product(request):
+    print(request.user)
+    return Response(status=200)
+
+
+# class ProductViewSet(viewsets.ModelViewSet):
+#     serializer_class = ProductSerializer
+#     queryset = Product.objects.all()
+#     permission_classes = [IsAuthenticated]
+
+#     def get_queryset(self):
+#         # Only return products belonging to the authenticated farmer
+#         return Product.objects.filter(farmer=self.request.user.farmer)
+
+#     def perform_create(self, serializer):
+#         serializer.save(farmer=self.request.user.farmer)  # Assign the farmer to the product
+
+#     @action(detail=True, methods=['put'], permission_classes=[IsAuthenticated])
+#     def update_stock(self, request, pk=None):
+#         product = self.get_object()
+#         new_quantity = request.data.get("quantity_available")
+#         if new_quantity is not None:
+#             product.quantity_available = new_quantity
+#             product.save()
+#             return Response(ProductSerializer(product).data)
+#         return Response({"detail": "Quantity not provided."}, status=status.HTTP_400_BAD_REQUEST)
+
+#     @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
+#     def mark_out_of_stock(self, request, pk=None):
+#         product = self.get_object()
+#         product.quantity_available = 0
+#         product.save()
+#         return Response(ProductSerializer(product).data)
+
+#     @action(detail=True, methods=['delete'], permission_classes=[IsAuthenticated])
+#     def delete_product(self, request, pk=None):
+#         product = self.get_object()
+#         product.delete()
+#         return Response({"message": "Product deleted successfully."}, status=status.HTTP_204_NO_CONTENT)

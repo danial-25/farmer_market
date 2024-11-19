@@ -2,12 +2,26 @@ from rest_framework import serializers
 from .models import Farmer, Category, Product
 from django.urls import reverse
 from rest_framework.reverse import reverse
+from users.models import *
 
 
 class FarmerSerializer(serializers.ModelSerializer):
+    user = serializers.DictField(write_only=True)
+
     class Meta:
         model = Farmer
-        fields = ["id", "name", "location", "contact_info"]
+        fields = ["id", "name", "location", "contact_info", "user"]
+
+    def create(self, validated_data):
+        user_data = validated_data.pop("user")
+        user = CustomUser.objects.create_user(
+            username=user_data["username"],
+            email=user_data["email"],
+            password=user_data["password"],
+            role="farmer",
+        )
+        buyer = Farmer.objects.create(user=user, **validated_data)
+        return buyer
 
 
 class CategorySerializer(serializers.ModelSerializer):
