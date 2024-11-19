@@ -1,6 +1,11 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.models import AbstractUser, Group, Permission
+from django.contrib.auth.models import User
+
+import farmer_market_backend
+
+
 # Create your models here.
 class CustomUser(AbstractUser):
     ROLE_CHOICES = [
@@ -28,3 +33,14 @@ class Buyer(models.Model):
 
     def __str__(self):
         return f"{self.user.username} (Buyer)"
+
+class Farmer(models.Model):
+    user = models.OneToOneField(farmer_market_backend.settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    name = models.CharField(max_length=255)
+    farm_name = models.CharField(max_length=255)
+    location = models.CharField(max_length=255)
+    phone_number = models.CharField(max_length=15)
+    pending_approval = models.BooleanField(default=True)
+
+    def __str__(self):
+        return self.name
