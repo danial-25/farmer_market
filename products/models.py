@@ -19,6 +19,7 @@ class Farmer(models.Model):
     name = models.CharField(max_length=255)
     location = models.CharField(max_length=255)
     contact_info = models.TextField()
+    is_pending = models.BooleanField(default=True)
     is_approved = models.BooleanField(default=False)
 
 

@@ -147,3 +147,32 @@ STATIC_URL = "static/"
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = "smtp.gmail.com"
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = "danial.sakhpantayev@gmail.com"
+EMAIL_HOST_PASSWORD = "xwkd dues ulvd uvcr "
+# DEFAULT_FROM_EMAIL = "danial.sakhpantayev@gmail.com"
+
+
+TEMPLATES = [
+    {
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [
+            BASE_DIR
+            / "users/templates",  # Add the global templates directory here if using a global base
+        ],
+        "APP_DIRS": True,  # Allow Django to look inside each app's 'templates' folder
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.debug",
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
+            ],
+        },
+    },
+]

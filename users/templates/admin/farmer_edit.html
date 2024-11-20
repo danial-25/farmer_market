@@ -1,0 +1,37 @@
+{% extends 'admin/base_generic.html' %}
+
+{% block content %}
+<h1>Edit Farmer: {{ farmer.name }}</h1>
+
+<form method="POST" action="{% url 'farmer' farmer.id %}">
+    {% csrf_token %}
+
+    <!-- Farmer Name -->
+    <label for="name">Name:</label>
+    <input type="text" id="name" name="name" value="{{ farmer.name }}" required><br><br>
+
+    <!-- Farmer Location -->
+    <label for="location">Location:</label>
+    <input type="text" id="location" name="location" value="{{ farmer.location }}" required><br><br>
+
+    <label for="email">Email:</label>
+    <span>{{ farmer.user.email }}</span><br><br>
+
+    <!-- Farmer Contact Info -->
+    <label for="contact_info">Contact Info:</label>
+    <input type="text" id="contact_info" name="contact_info" value="{{ farmer.contact_info }}" required><br><br>
+
+    <!-- Submit Button -->
+    <button type="submit">Save Changes</button>
+</form>
+
+<!-- Cancel Button -->
+<a href="{% url 'farmers' %}">Cancel</a>
+{% if errors %}
+<ul style="color:red;">
+    {% for field, error in errors.items %}
+    <li>{{ field }}: {{ error }}</li>
+    {% endfor %}
+</ul>
+{% endif %}
+{% endblock %}

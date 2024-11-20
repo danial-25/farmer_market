@@ -27,6 +27,13 @@ class FarmerSerializer(serializers.ModelSerializer):
         buyer = Farmer.objects.create(user=user, **validated_data)
         return buyer
 
+    def update(self, instance, validated_data):
+        # Update only Farmer-specific fields (do not touch user-related fields)
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()  # Save the updated instance
+        return instance
+
 
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
