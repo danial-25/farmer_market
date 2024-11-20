@@ -19,6 +19,7 @@
 from rest_framework import serializers
 from .models import Buyer
 from users.models import CustomUser
+from users.models import Farmer
 
 class BuyerSerializer(serializers.ModelSerializer):
     user = serializers.DictField(write_only=True)  # Expect a dictionary for user data
@@ -37,3 +38,20 @@ class BuyerSerializer(serializers.ModelSerializer):
         )
         buyer = Buyer.objects.create(user=user, **validated_data)
         return buyer
+
+class FarmerSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Farmer
+        fields = ['id', 'user', 'name', 'farm_name', 'location', 'phone_number', 'pending_approval']
+        read_only_fields = ['id', 'pending_approval']
+
+    def create(self, validated_data):
+        # Custom creation logic if needed
+        return Farmer.objects.create(**validated_data)
+
+    def update(self, instance, validated_data):
+        # Custom update logic if needed
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        return instance
