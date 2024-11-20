@@ -176,3 +176,10 @@ TEMPLATES = [
         },
     },
 ]
+
+# MEDIA_URL = '/media/'  # The base URL for accessing media files
+# MEDIA_ROOT = BASE_DIR / 'media/'
+import os
+
+MEDIA_URL = "/media/"  # URL to access media files
+MEDIA_ROOT = os.path.join(BASE_DIR, "")
