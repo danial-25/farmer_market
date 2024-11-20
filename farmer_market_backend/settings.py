@@ -154,7 +154,7 @@ EMAIL_HOST = "smtp.gmail.com"
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = "danial.sakhpantayev@gmail.com"
-EMAIL_HOST_PASSWORD = "xwkd dues ulvd uvcr "
+EMAIL_HOST_PASSWORD = config["EMAIL_PASSWORD"]
 # DEFAULT_FROM_EMAIL = "danial.sakhpantayev@gmail.com"
 
 
