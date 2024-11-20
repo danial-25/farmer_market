@@ -65,7 +65,8 @@ INSTALLED_APPS = [
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGINS = [
     "https://farmer-market-33zm.onrender.com",
-    "http://localhost:3000",  # If your frontend is running on this port
+    "http://localhost:3000",  # If your frontend is running on this portб
+    "http://localhost:8081",  # If your frontend is running on this port
 ]
 
 MIDDLEWARE = [
