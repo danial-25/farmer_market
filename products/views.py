@@ -11,6 +11,21 @@ from .serializers import *
 from rest_framework import status, viewsets
 
 from .forms import ProductForm
+from django.core.exceptions import SuspiciousFileOperation
+from django.core.files.storage import FileSystemStorage
+
+
+def try_get_image_url(product):
+    """
+    Safely get the URL of the product image, handling cases where the file is missing.
+    """
+    try:
+        # Check if the file exists in the storage system
+        if product.image and FileSystemStorage().exists(product.image.name):
+            return product.image.url
+    except (ValueError, SuspiciousFileOperation):
+        pass  # Handle any errors related to file paths or missing files
+    return None
 
 
 @api_view(["GET"])
@@ -117,18 +132,29 @@ def farmer_dashboard(request):
     products = Product.objects.filter(farmer=request.user.farmer_profile)
 
     # Low-stock notification logic
-    low_stock_products = products.filter(quantity_available__lt=1000)
+    # low_stock_products = products.filter(quantity_available__lt=1000)
 
     data = {
         "farmer_name": request.user.farmer_profile.name,
         "total_products": products.count(),
-        "low_stock_products": [
+        "products": [
             {
                 "id": product.id,
                 "name": product.name,
                 "quantity_available": product.quantity_available,
+                "image": (
+                    (
+                        product.image.url
+                        if product.image and hasattr(product.image, "url")
+                        else None
+                    )
+                    if try_get_image_url(product)
+                    else None
+                ),
+                "price": product.price,
+                "product_id": product.pid,
             }
-            for product in low_stock_products
+            for product in products
         ],
     }
     return Response(data)
