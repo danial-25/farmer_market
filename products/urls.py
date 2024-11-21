@@ -6,6 +6,7 @@ from django.conf.urls.static import static
 urlpatterns = [
     path("list/", list),
     path("products/<int:id>", single, name="products-detail"),
+    path("categories/", categories),
 ]
 # if settings.DEBUG:
 #     # urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

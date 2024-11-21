@@ -13,6 +13,14 @@ from rest_framework import status, viewsets
 from .forms import ProductForm
 
 
+@api_view(["GET"])
+@permission_classes([IsAuthenticatedOrReadOnly])
+def categories(request):
+    categories = Category.objects.all()
+    categories = CategorySerializer(categories, many=True)
+    return Response(categories.data)
+
+
 @api_view()
 @permission_classes([IsAuthenticatedOrReadOnly])
 def list(request):
