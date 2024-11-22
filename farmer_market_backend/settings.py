@@ -30,7 +30,7 @@ SECRET_KEY = config["SECRET_KEY"]
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
-
+# CSRF_COOKIE_HTTPONLY = True
 CSRF_TRUSTED_ORIGINS = [
     "https://farmer-market-33zm.onrender.com",
     "http://127.0.0.1",

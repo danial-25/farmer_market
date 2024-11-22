@@ -27,4 +27,5 @@ urlpatterns = [
         PendingFarmersAPIView.as_view(),
         name="approve-reject-farmer",
     ),
+    # path("farmer/profile/", FarmerProfile.as_view()),
 ]

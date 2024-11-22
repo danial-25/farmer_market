@@ -5,6 +5,7 @@ from rest_framework import status
 from rest_framework.authtoken.models import Token
 from .serializers import *
 from products.serializers import *
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import (
     api_view,
     permission_classes,
@@ -12,6 +13,7 @@ from rest_framework.decorators import (
 )
 from django.contrib.auth import authenticate
 from rest_framework.permissions import AllowAny
+from django.views.decorators.csrf import csrf_exempt
 
 # from rest_framework.permissions import IsAdmin
 
@@ -21,7 +23,7 @@ from rest_framework import status, viewsets
 from django.core.mail import send_mail
 from django.http import HttpResponseRedirect
 from django.shortcuts import redirect
-
+from products.models import Farm
 
 from rest_framework.permissions import BasePermission
 from rest_framework.authtoken.models import Token
@@ -128,6 +130,49 @@ def send_email(subject, message, recipient_list):
     from django.core.mail import send_mail
 
     send_mail(subject, message, "danial.sakhpantayev@gmail.com", recipient_list)
+
+
+class FarmerProfile(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        # Get the farmer linked to the authenticated user
+        farmer = request.user.farmer_profile
+        if farmer is None:
+            return Response(
+                {"detail": "Farmer not found"}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Serialize the farmer's personal data
+        farmer_serializer = FarmerSerializer(farmer)
+
+        # Get the associated farm data (only name for now)
+
+        farm_data = {"name": Farm.objects.get(farmer=farmer).name}
+
+        return Response({"farmer": farmer_serializer.data, "farm": farm_data})
+
+    def patch(self, request):
+        # Get the farmer linked to the authenticated user
+        farmer = request.user.farmer_profile
+        if farmer is None:
+            return Response(
+                {"detail": "Farmer not found"}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Update the farmer's personal information
+        farmer_serializer = FarmerSerializer(farmer, data=request.data, partial=True)
+        if farmer_serializer.is_valid():
+            farmer_serializer.save()
+
+        # If farm name is provided, update it
+        if "farm" in request.data and "name" in request.data["farm"]:
+            farm_name = request.data["farm"]["name"]
+            farm = Farm.objects.get(farmer=farmer)
+            farm.name = farm_name
+            farm.save()
+
+        return Response({"farmer": farmer_serializer.data, "farm": {"name": farm.name}})
 
 
 class FarmerUpdateAPIView(APIView):
@@ -354,6 +399,7 @@ class PendingFarmersAPIView(APIView):
     permission_classes = [IsAdmin]
 
     def get(self, request, id=None):
+        print("lol")
         # If `id` is provided, get a specific farmer, else list all pending farmers
         if id:
             try:

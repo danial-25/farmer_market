@@ -14,7 +14,7 @@ class FarmerSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Farmer
-        fields = ["id", "name", "location", "contact_info", "user"]
+        fields = ["id", "name", "location", "contact_info", "profile_picture", "user"]
 
     def create(self, validated_data):
         user_data = validated_data.pop("user")
