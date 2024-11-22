@@ -1,6 +1,7 @@
 from django.urls import path, include
 from .views import *
 from rest_framework.routers import DefaultRouter
+from . import views
 
 router = DefaultRouter()
 # router.register('farmers', FarmerViewSet, basename='farmer')
@@ -27,4 +28,7 @@ urlpatterns = [
         PendingFarmersAPIView.as_view(),
         name="approve-reject-farmer",
     ),
+    path("buyers/cart/", views.get_cart, name="get_cart"),
+    path("buyers/cart/add/", views.add_to_cart, name="add_to_cart"),
+    path("buyers/cart/apply-promo/", views.apply_promo_code, name="apply_promo_code"),
 ]

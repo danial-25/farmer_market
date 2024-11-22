@@ -11,7 +11,7 @@ from rest_framework.decorators import (
     authentication_classes,
 )
 from django.contrib.auth import authenticate
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticatedOrReadOnly
 
 # from rest_framework.permissions import IsAdmin
 
@@ -397,6 +397,71 @@ class PendingFarmersAPIView(APIView):
             farmer.save()
             return Response({"message": "Farmer rejected."}, status=status.HTTP_200_OK)
 
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticatedOrReadOnly])
+def get_cart(request):
+    if not request.user.is_authenticated:
+        return Response({"detail": "Authentication required."}, status=status.HTTP_401_UNAUTHORIZED)
+
+    cart, created = Cart.objects.get_or_create(buyer=request.user)
+    serializer = CartSerializer(cart)
+    return Response(serializer.data)
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticatedOrReadOnly])
+def add_to_cart(request):
+
+    try:
+        # Extract product ID and quantity from the request
+        product_id = request.data.get("product_id")
+        quantity = request.data.get("quantity", 1)  # Default to 1 if not provided
+
+        # Validate the product
+        try:
+            product = Product.objects.get(id=product_id)
+        except Product.DoesNotExist:
+            return Response(
+                {"detail": "Product not found."}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Get or create a cart for the logged-in user
+        cart, _ = Cart.objects.get_or_create(buyer=request.user)
+
+        # Get or create the cart item
+        cart_item, created = CartItem.objects.get_or_create(cart=cart, product=product)
+        if not created:
+            # If the item already exists, update the quantity
+            cart_item.quantity += int(quantity)
+        else:
+            cart_item.quantity = int(quantity)
+
+        cart_item.save()
+
+        return Response(
+            {
+                "detail": "Item added to cart successfully.",
+                "cart_item": {
+                    "product": product.name,
+                    "quantity": cart_item.quantity,
+                },
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    except Exception as e:
+        return Response(
+            {"detail": f"An error occurred: {str(e)}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticatedOrReadOnly])
+def apply_promo_code(request):
+    # Placeholder for promo code logic
+    promo_code = request.data.get("promo_code")
+    # Validate and apply promo code here
+    return Response({"detail": "Promo code applied successfully."}, status=status.HTTP_200_OK)
 
 # @api_view(["POST"])
 # def create_farmer(request):
