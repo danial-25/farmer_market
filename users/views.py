@@ -147,8 +147,12 @@ class FarmerProfile(APIView):
         farmer_serializer = FarmerSerializer(farmer)
 
         # Get the associated farm data (only name for now)
-
-        farm_data = {"name": Farm.objects.get(farmer=farmer).name}
+        try:
+            farm = Farm.objects.get(farmer=farmer)
+            farm_data = {"name": farm.name}
+        except Farm.DoesNotExist:
+            farm_data = {}
+        # farm_data = {"name": Farm.objects.get(farmer=farmer).name}
 
         return Response({"farmer": farmer_serializer.data, "farm": farm_data})
 
@@ -168,9 +172,12 @@ class FarmerProfile(APIView):
         # If farm name is provided, update it
         if "farm" in request.data and "name" in request.data["farm"]:
             farm_name = request.data["farm"]["name"]
-            farm = Farm.objects.get(farmer=farmer)
-            farm.name = farm_name
-            farm.save()
+            try:
+                farm = Farm.objects.get(farmer=farmer)
+                farm.name = farm_name
+                farm.save()
+            except Farm.DoesNotExist:
+                farm = None
 
         return Response({"farmer": farmer_serializer.data, "farm": {"name": farm.name}})
 
