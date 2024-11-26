@@ -14,11 +14,15 @@ urlpatterns = [
     path(
         "products/<int:product_id>/remove/", views.remove_product, name="remove_product"
     ),
+    # path(
+    #     "product/<int:product_id>/update/", views.update_product, name="update_product"
+    # ),
+    # "path('product/<slug:product_id>/update/', views.update_product, name='update_product')"
     path(
-        "product/<int:product_id>/update/", views.update_product, name="update_product"
+        "product/<slug:product_id>/update/", views.update_product, name="update_product"
     ),
     path(
-        "product/<int:product_id>/delete/", views.delete_product, name="delete_product"
+        "product/<slug:product_id>/delete/", views.delete_product, name="delete_product"
     ),
     path("profile/", FarmerProfile.as_view()),
     path("farm/", FarmManagementView.as_view()),
