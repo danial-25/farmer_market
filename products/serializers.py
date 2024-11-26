@@ -7,7 +7,8 @@ from .models import Product, Category, ProductImage
 from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
 from django.core.files.uploadedfile import InMemoryUploadedFile
-
+import random
+import os
 
 from rest_framework import serializers
 from .models import Farm
@@ -136,7 +137,7 @@ class ProductCreateSerializer(serializers.ModelSerializer):
             "popularity",
             "farmer",  # Include farmer in the fields (though this will be set in the view)
         ]
-        read_only_fields = ["farmer"]  # Make sure 'farmer' is read-only
+        read_only_fields = ["farmer", "popularity"]  # Make sure 'farmer' is read-only
 
     def create(self, validated_data):
         """Handle image resizing, farmer assignment, and product creation."""
@@ -150,6 +151,7 @@ class ProductCreateSerializer(serializers.ModelSerializer):
 
         # Add the farmer to the validated data
         validated_data["farmer"] = farmer
+        validated_data["popularity"] = random.randint(1, 100)
 
         product = Product.objects.create(**validated_data)
 
@@ -159,8 +161,40 @@ class ProductCreateSerializer(serializers.ModelSerializer):
             product.image = resized_image  # Assign resized image to the product
 
         product.save()  # Save product with resized image
-
         return product
+
+    # def update(self, instance, validated_data):
+    #     """Handle partial updates of the product."""
+    #     # Iterate over the validated data and update the corresponding fields
+    #     for attr, value in validated_data.items():
+    #         if attr == "image" and value:  # Handle image resizing if image is updated
+    #             resized_image = instance.resize_image(value)
+    #             setattr(instance, attr, resized_image)
+    #         else:
+    #             setattr(instance, attr, value)
+
+    #     instance.save()  # Save the updated instance
+    #     return instance
+
+    def update(self, instance, validated_data):
+        """Handle partial updates of the product."""
+        image = validated_data.get("image", None)
+
+        # Check if image is None or not provided
+
+        # If we want to check if the current image exists on disk:
+        if instance.image and not os.path.exists(instance.image.path):
+            # If the current image does not exist, set image to None
+            instance.image = None
+
+        # Update other fields as usual
+        for attr, value in validated_data.items():
+            if attr != "image":
+                setattr(instance, attr, value)
+
+        instance.save()
+        return instance
+
         # print("lol")
         # # Create the product
         # product = Product.objects.create(**validated_data)

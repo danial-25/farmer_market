@@ -99,7 +99,6 @@ def create_product(request):
         return Response(
             {"detail": "Authentication required."}, status=status.HTTP_403_FORBIDDEN
         )
-    print("lol")
     serializer = ProductCreateSerializer(
         data=request.data, context={"request": request}
     )
@@ -210,21 +209,47 @@ def delete_product(request, product_id):
         return Response({"detail": "Product not found."}, status=404)
 
 
-@api_view(["PUT"])
+# @api_view(["PATCH"])
+# @permission_classes([IsAuthenticated])
+# def update_product(request, product_id):
+#     try:
+#         product = Product.objects.get(
+#             pid=product_id, farmer=request.user.farmer_profile
+#         )
+#         data = request.data
+#         product.name = data.get("name", product.name)
+#         product.description = data.get("description", product.description)
+#         product.price = data.get("price", product.price)
+#         product.quantity_available = data.get(
+#             "quantity_available", product.quantity_available
+#         )
+#         product.save()
+#         return Response({"message": "Product updated successfully."}, status=200)
+#     except Product.DoesNotExist:
+#         return Response({"detail": "Product not found."}, status=404)
+
+
+@api_view(["PATCH"])
 @permission_classes([IsAuthenticated])
 def update_product(request, product_id):
     try:
+        # Retrieve the product owned by the authenticated farmer
         product = Product.objects.get(
             pid=product_id, farmer=request.user.farmer_profile
         )
-        data = request.data
-        product.name = data.get("name", product.name)
-        product.description = data.get("description", product.description)
-        product.price = data.get("price", product.price)
-        product.quantity_available = data.get(
-            "quantity_available", product.quantity_available
-        )
-        product.save()
-        return Response({"message": "Product updated successfully."}, status=200)
     except Product.DoesNotExist:
-        return Response({"detail": "Product not found."}, status=404)
+        return Response(
+            {"detail": "Product not found."}, status=status.HTTP_404_NOT_FOUND
+        )
+
+    # Use the serializer for partial updates
+    serializer = ProductCreateSerializer(product, data=request.data, partial=True)
+    if serializer.is_valid():
+        serializer.save()  # Save the updated product
+        print("yo")
+        return Response(
+            {"message": "Product updated successfully.", "product": serializer.data},
+            status=status.HTTP_200_OK,
+        )
+    else:
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

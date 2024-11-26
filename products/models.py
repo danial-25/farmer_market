@@ -50,20 +50,6 @@ class Category(models.Model):
 class ProductImage(models.Model):
     image = models.ImageField(upload_to="product_images/")
 
-    # def clean(self):
-    #     """Validate the image file."""
-    #     print(self.image.name)
-    #     if not self.image.name.lower().endswith((".png", ".jpg", ".jpeg")):
-    #         raise ValidationError("Only PNG, JPG, and JPEG image formats are allowed.")
-    #     if self.image.size > 5 * 1024 * 1024:  # 5MB limit
-    #         raise ValidationError("Image size must be less than 5MB.")
-
-    # def save(self, *args, **kwargs):
-    #     """Resize image before saving."""
-    #     if self.image:
-    #         self.image = resize_image(self.image)
-    #     super().save(*args, **kwargs)
-
 
 class Product(models.Model):
     name = models.CharField(max_length=255)

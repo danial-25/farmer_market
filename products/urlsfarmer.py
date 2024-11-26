@@ -7,12 +7,14 @@ urlpatterns = [
     path("products/create/", views.create_product, name="product-create"),
     path("dashboard/", farmer_dashboard, name="farmer_dashboard"),
     path(
-        "products/<int:product_id>/out_of_stock/",
+        "products/<slug:product_id>//out_of_stock/",
         views.mark_out_of_stock,
         name="mark_out_of_stock",
-    ),#fix needed
+    ),  # fix needed
     path(
-        "products/<int:product_id>/remove/", views.remove_product, name="remove_product"
+        "products/<slug:product_id>//remove/",
+        views.remove_product,
+        name="remove_product",
     ),
     # path(
     #     "product/<int:product_id>/update/", views.update_product, name="update_product"
