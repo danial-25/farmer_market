@@ -170,17 +170,23 @@ class FarmerProfile(APIView):
         if farmer_serializer.is_valid():
             farmer_serializer.save()
 
+        # Initialize farm_name to handle cases where farm does not exist
+        farm_name = None
+
         # If farm name is provided, update it
         if "farm" in request.data and "name" in request.data["farm"]:
-            farm_name = request.data["farm"]["name"]
             try:
+                # Attempt to retrieve the farm associated with the farmer
                 farm = Farm.objects.get(farmer=farmer)
-                farm.name = farm_name
+                farm.name = request.data["farm"]["name"]
                 farm.save()
+                farm_name = farm.name
             except Farm.DoesNotExist:
-                farm = None
+                # Handle case where no farm exists
+                farm_name = None
 
-        return Response({"farmer": farmer_serializer.data, "farm": {"name": farm.name}})
+        return Response({"farmer": farmer_serializer.data, "farm": {"name": farm_name}})
+
 
 
 class FarmManagementView(APIView):

@@ -10,7 +10,7 @@ urlpatterns = [
         "products/<int:product_id>/out_of_stock/",
         views.mark_out_of_stock,
         name="mark_out_of_stock",
-    ),
+    ),#fix needed
     path(
         "products/<int:product_id>/remove/", views.remove_product, name="remove_product"
     ),
