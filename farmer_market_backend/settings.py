@@ -60,6 +60,7 @@ INSTALLED_APPS = [
     "rest_framework.authtoken",
     "products",
     "users",
+    "chats",
     "corsheaders",
 ]
 CORS_ALLOW_CREDENTIALS = True

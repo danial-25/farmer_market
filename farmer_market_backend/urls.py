@@ -25,6 +25,7 @@ urlpatterns = [
     path("products/", include("products.urls")),
     path("users/", include("users.urls")),
     path("farmer/", include("products.urlsfarmer")),
+    path("chat/", include("chats.urls")),
 ]
 
 if settings.DEBUG:
