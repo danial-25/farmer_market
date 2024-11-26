@@ -2,8 +2,10 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.models import AbstractUser, Group, Permission
 from django.contrib.auth.models import User
+from products.models import *
 
 import farmer_market_backend
+from products.models import Product
 
 
 # Create your models here.
@@ -39,3 +41,30 @@ class Buyer(models.Model):
 
 #     def __str__(self):
 #         return self.name
+
+class Cart(models.Model):
+    buyer = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name="cart")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def subtotal(self):
+        return sum(item.total_price() for item in self.items.all())
+
+    def total(self):
+        tax_and_fees = 200  # Example fixed fee
+        delivery_fee = 100  # Example fixed fee
+        return self.subtotal() + tax_and_fees + delivery_fee
+
+class CartItem(models.Model):
+    cart = models.ForeignKey(
+        Cart,
+        on_delete=models.CASCADE,
+        related_name="items"
+    )
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.CASCADE
+    )
+    quantity = models.PositiveIntegerField(default=1)
+
+    def total_price(self):
+        return self.quantity * self.product.price  # Assuming Product has a `price` field

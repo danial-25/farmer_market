@@ -1,6 +1,5 @@
 from django.db import models
 from django.core.validators import MaxValueValidator, MinValueValidator
-from users.models import *
 from django.core.exceptions import ValidationError
 from PIL import Image
 from io import BytesIO
@@ -9,9 +8,11 @@ import hashlib
 from django.core.files.base import ContentFile
 
 
+
+
 class Farmer(models.Model):
     user = models.OneToOneField(
-        CustomUser,
+        "users.CustomUser",
         on_delete=models.CASCADE,
         related_name="farmer_profile",
         null=True,  # Allow null values temporarily

@@ -19,6 +19,7 @@
 from rest_framework import serializers
 from .models import Buyer
 from users.models import CustomUser
+from .models import Cart, CartItem
 
 # from users.models import Farmer
 
@@ -47,6 +48,37 @@ class BuyerSerializer(serializers.ModelSerializer):
             setattr(instance, attr, value)
         instance.save()  # Save the updated instance
         return instance
+
+class CartItemSerializer(serializers.ModelSerializer):
+    product_name = serializers.CharField(source="product.name")
+    product_price = serializers.DecimalField(source="product.price", max_digits=10, decimal_places=2)
+
+    class Meta:
+        model = CartItem
+        fields = ["id", "product_name", "product_price", "quantity", "total_price"]
+
+class CartSerializer(serializers.ModelSerializer):
+    items = CartItemSerializer(many=True)
+    subtotal = serializers.SerializerMethodField()
+    tax_and_fees = serializers.SerializerMethodField()
+    delivery_fee = serializers.SerializerMethodField()
+    total = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Cart
+        fields = ["id", "items", "subtotal", "tax_and_fees", "delivery_fee", "total", 'created_at']
+
+    def get_subtotal(self, obj):
+        return obj.subtotal()
+
+    def get_tax_and_fees(self, obj):
+        return 200  # Example fixed fee
+
+    def get_delivery_fee(self, obj):
+        return 100  # Example fixed fee
+
+    def get_total(self, obj):
+        return obj.total()
 
 
 # class FarmerSerializer(serializers.ModelSerializer):

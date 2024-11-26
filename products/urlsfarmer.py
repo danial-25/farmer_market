@@ -21,4 +21,5 @@ urlpatterns = [
         "product/<int:product_id>/delete/", views.delete_product, name="delete_product"
     ),
     path("profile/", FarmerProfile.as_view()),
+    path("farm/", FarmManagementView.as_view()),
 ]

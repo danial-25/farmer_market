@@ -9,6 +9,16 @@ from django.core.files.base import ContentFile
 from django.core.files.uploadedfile import InMemoryUploadedFile
 
 
+from rest_framework import serializers
+from .models import Farm
+
+
+class FarmSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Farm
+        fields = ["name", "size", "address", "resources"]
+
+
 class FarmerSerializer(serializers.ModelSerializer):
     user = serializers.DictField(write_only=True)
 
