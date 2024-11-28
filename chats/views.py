@@ -1,7 +1,9 @@
-from rest_framework import generics, permissions
+from rest_framework import generics, permissions, status
 from django.db.models import Q
 from .models import ChatMessage
 from .serializers import ChatMessageSerializer
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
 
 class MyInbox(generics.ListAPIView):
@@ -53,3 +55,36 @@ class SendMessages(generics.CreateAPIView):
 
     serializer_class = ChatMessageSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+    def perform_create(self, serializer):
+        sender = self.request.user
+        serializer.save(sender=sender)
+
+
+# class SendMessages(APIView):
+#     """
+#     API view to send a message between users.
+#     """
+
+#     permission_classes = [permissions.IsAuthenticated]
+
+#     def post(self, request):
+#         # Add sender to the data before passing it to the serializer
+#         request.data["sender"] = (
+#             request.user.id
+#         )  # Set the sender from the authenticated user
+
+#         # Initialize the serializer with the request data
+#         print(request.data)
+#         serializer = ChatMessageSerializer(data=request.data)
+
+#         # Validate and save if valid
+#         if serializer.is_valid():
+#             # The save method will automatically save the model, including the sender
+#             message = serializer.save()
+
+#             # Return a success response with serialized message data
+#             return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+#         # If validation fails, return the errors
+#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

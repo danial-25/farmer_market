@@ -9,14 +9,18 @@ class ChatMessageSerializer(serializers.ModelSerializer):
     class Meta:
         model = ChatMessage
         fields = [
-            'sender',
-            'receiver',
-            'message',
-            'is_read',
-            'date',
-            'sender_profile',
-            'receiver_profile',
+            "sender",
+            "receiver",
+            "message",
+            "is_read",
+            "date",
+            "sender_profile",
+            "receiver_profile",
         ]
+        # extra_kwargs = {
+        #     'sender': {'read_only': True},  # Mark sender as read-only
+        # }
+        read_only_fields = ["sender"]
 
     def get_sender_profile(self, obj):
         if obj.sender.role == "buyer" and hasattr(obj.sender, "buyer_profile"):

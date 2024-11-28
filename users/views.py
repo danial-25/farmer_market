@@ -60,6 +60,14 @@ class IsAdmin(BasePermission):
             return False
 
 
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def user_info(request):
+    buyer = request.user.buyer_profile
+    buyer = BuyerSerializer(buyer)
+    return Response(buyer.data)
+
+
 class BuyerRegistrationView(APIView):
     permission_classes = [AllowAny]
 
@@ -186,7 +194,6 @@ class FarmerProfile(APIView):
                 farm_name = None
 
         return Response({"farmer": farmer_serializer.data, "farm": {"name": farm_name}})
-
 
 
 class FarmManagementView(APIView):
