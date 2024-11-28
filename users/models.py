@@ -6,7 +6,7 @@ from products.models import *
 from django.core.mail import send_mail
 import farmer_market_backend
 from products.models import Product
-
+from django.utils import timezone
 
 # Create your models here.
 class CustomUser(AbstractUser):
@@ -75,8 +75,8 @@ class Order(models.Model):
     buyer = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="orders")
     created_at = models.DateTimeField(auto_now_add=True)
     delivery_details = models.TextField()  # Capture delivery address or special instructions
-    total_price = models.DecimalField(max_digits=10, decimal_places=2, default=0.0)
     is_completed = models.BooleanField(default=False)
+    order_date = models.DateTimeField(auto_now_add=True)
 
     class OrderStatus(models.TextChoices):
         PLACED = 'Placed', 'Placed'
@@ -104,7 +104,6 @@ class OrderItem(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     quantity = models.PositiveIntegerField()
-    price = models.DecimalField(max_digits=10, decimal_places=2, default=0.0)
 
     def get_subtotal(self):
         return self.product.price * self.quantity

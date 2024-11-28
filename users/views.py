@@ -597,6 +597,9 @@ class PlaceOrderView(generics.CreateAPIView):
         # You can pass the user explicitly as well when saving
         user = self.request.user
         serializer.save(buyer=user)
+        order = serializer.save(buyer=user)
+        order.calculate_total()  # This will update the total_price field
+        order.save()
 
 class OrderTrackingView(APIView):
     permission_classes = [IsAuthenticated]
@@ -640,6 +643,21 @@ class ChangeOrderStatusView(APIView):
             logger.error(f"Error sending email: {e}")
 
         return Response({"message": "Order status updated and notification sent."})
+
+class OrderHistoryView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        # Get the current authenticated user
+        buyer = request.user
+
+        # Filter orders by the buyer (user)
+        orders = Order.objects.filter(buyer=buyer).order_by('-order_date')  # Order by most recent
+
+        # Serialize the order data
+        serializer = OrderSerializer(orders, many=True)
+
+        return Response(serializer.data)
 
 # @api_view(["POST"])
 # def create_farmer(request):
