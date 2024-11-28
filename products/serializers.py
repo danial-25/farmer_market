@@ -21,7 +21,7 @@ class FarmSerializer(serializers.ModelSerializer):
 
 
 class FarmerSerializer(serializers.ModelSerializer):
-    user = serializers.DictField(write_only=True)
+    # user = serializers.DictField(write_only=True)
 
     class Meta:
         model = Farmer
