@@ -29,6 +29,7 @@ from products.models import Farm
 from rest_framework.permissions import BasePermission
 from rest_framework.authtoken.models import Token
 from django.contrib.auth.models import User
+import logging
 
 
 class IsAdmin(BasePermission):
@@ -597,6 +598,48 @@ class PlaceOrderView(generics.CreateAPIView):
         user = self.request.user
         serializer.save(buyer=user)
 
+class OrderTrackingView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, order_id):
+        try:
+            order = Order.objects.get(id=order_id)
+            return Response({
+                'order_id': order.id,
+                'status': order.status,
+                'total_price': order.total_price,
+            })
+        except Order.DoesNotExist:
+            return Response({"error": "Order not found"}, status=404)
+
+
+logger = logging.getLogger(__name__)
+
+class ChangeOrderStatusView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def put(self, request, order_id):
+        order = Order.objects.get(id=order_id)
+        status = request.data.get('status')
+
+        # Update the order status
+        order.status = status
+        order.save()
+
+        # Send the email notification
+        try:
+            send_mail(
+                'Order Status Update',
+                f'Your order {order_id} status is now: {status}.',
+                os.getenv('EMAIL_HOST_USER'),
+                [order.buyer.email],  # Assuming the buyer is linked to the order
+                fail_silently=False,
+            )
+            logger.info(f"Email sent to {order.buyer.email} for order {order_id}")
+        except Exception as e:
+            logger.error(f"Error sending email: {e}")
+
+        return Response({"message": "Order status updated and notification sent."})
 
 # @api_view(["POST"])
 # def create_farmer(request):
