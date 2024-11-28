@@ -4,7 +4,7 @@
 #     class Meta:
 #         model = Buyer
 #         fields = ('id', 'user', 'delivery_address', 'contact_number')
-
+from requests import Response
 #     def create(self, validated_data):
 #         user_data = validated_data.pop('user')
 #         user = CustomUser.objects.create_user(
@@ -16,8 +16,10 @@
 #         buyer = Buyer.objects.create(user=user, **validated_data)
 #         return buyer
 
-from rest_framework import serializers
-from .models import Buyer
+from rest_framework import serializers, status
+from rest_framework.views import APIView
+
+from .models import Buyer, OrderItem, Order
 from users.models import CustomUser
 from .models import Cart, CartItem
 
@@ -92,6 +94,35 @@ class CartSerializer(serializers.ModelSerializer):
     def get_total(self, obj):
         return obj.total()
 
+class OrderItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = OrderItem
+        fields = ['product', 'quantity']
+
+class OrderSerializer(serializers.ModelSerializer):
+    items = OrderItemSerializer(many=True)
+
+    class Meta:
+        model = Order
+        fields = ['id', 'buyer', 'delivery_details', 'items', 'total_price', 'is_completed']
+        read_only_fields = ['buyer', 'total_price', 'is_completed']
+
+    def create(self, validated_data):
+        # Access user from the context and safely create order
+        user = self.context.get('request').user
+        if not user:
+            raise serializers.ValidationError("User not found in request context.")
+
+        items_data = validated_data.pop('items')
+        order = Order.objects.create(buyer=user, **validated_data)
+
+        # Add order items
+        for item_data in items_data:
+            OrderItem.objects.create(order=order, **item_data)
+
+        # Calculate total price
+        order.calculate_total()
+        return order
 
 # class FarmerSerializer(serializers.ModelSerializer):
 #     class Meta:

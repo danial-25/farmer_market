@@ -1,7 +1,7 @@
 from django.shortcuts import render, get_object_or_404
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import status
+from rest_framework import status, generics
 from rest_framework.authtoken.models import Token
 from .serializers import *
 from products.serializers import *
@@ -29,6 +29,7 @@ from products.models import Farm
 from rest_framework.permissions import BasePermission
 from rest_framework.authtoken.models import Token
 from django.contrib.auth.models import User
+import logging
 
 
 class IsAdmin(BasePermission):
@@ -571,6 +572,74 @@ def apply_promo_code(request):
         {"detail": "Promo code applied successfully."}, status=status.HTTP_200_OK
     )
 
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def place_order(request):
+    if request.method == 'POST':
+        # Pass the request context to the serializer
+        serializer = OrderSerializer(data=request.data, context={'request': request})
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class PlaceOrderView(generics.CreateAPIView):
+    serializer_class = OrderSerializer
+
+    def get_serializer_context(self):
+        # Ensure 'request' is passed in the context
+        context = super().get_serializer_context()
+        context['request'] = self.request  # Explicitly set the request
+        return context
+
+    def perform_create(self, serializer):
+        # You can pass the user explicitly as well when saving
+        user = self.request.user
+        serializer.save(buyer=user)
+
+class OrderTrackingView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, order_id):
+        try:
+            order = Order.objects.get(id=order_id)
+            return Response({
+                'order_id': order.id,
+                'status': order.status,
+                'total_price': order.total_price,
+            })
+        except Order.DoesNotExist:
+            return Response({"error": "Order not found"}, status=404)
+
+
+logger = logging.getLogger(__name__)
+
+class ChangeOrderStatusView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def put(self, request, order_id):
+        order = Order.objects.get(id=order_id)
+        status = request.data.get('status')
+
+        # Update the order status
+        order.status = status
+        order.save()
+
+        # Send the email notification
+        try:
+            send_mail(
+                'Order Status Update',
+                f'Your order {order_id} status is now: {status}.',
+                os.getenv('EMAIL_HOST_USER'),
+                [order.buyer.email],  # Assuming the buyer is linked to the order
+                fail_silently=False,
+            )
+            logger.info(f"Email sent to {order.buyer.email} for order {order_id}")
+        except Exception as e:
+            logger.error(f"Error sending email: {e}")
+
+        return Response({"message": "Order status updated and notification sent."})
 
 # @api_view(["POST"])
 # def create_farmer(request):
