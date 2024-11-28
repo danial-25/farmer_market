@@ -5,12 +5,15 @@ from rest_framework import status
 from rest_framework.authtoken.models import Token
 from .serializers import *
 from products.serializers import *
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import (
     api_view,
     permission_classes,
     authentication_classes,
 )
 from django.contrib.auth import authenticate
+from rest_framework.permissions import AllowAny
+from django.views.decorators.csrf import csrf_exempt
 from rest_framework.permissions import AllowAny, IsAuthenticatedOrReadOnly
 
 # from rest_framework.permissions import IsAdmin
@@ -21,7 +24,7 @@ from rest_framework import status, viewsets
 from django.core.mail import send_mail
 from django.http import HttpResponseRedirect
 from django.shortcuts import redirect
-
+from products.models import Farm
 
 from rest_framework.permissions import BasePermission
 from rest_framework.authtoken.models import Token
@@ -55,6 +58,14 @@ class IsAdmin(BasePermission):
         except (Token.DoesNotExist, User.DoesNotExist):
             print("Token or User does not exist.")
             return False
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def user_info(request):
+    buyer = request.user.buyer_profile
+    buyer = BuyerSerializer(buyer)
+    return Response(buyer.data)
 
 
 class BuyerRegistrationView(APIView):
@@ -128,6 +139,96 @@ def send_email(subject, message, recipient_list):
     from django.core.mail import send_mail
 
     send_mail(subject, message, "danial.sakhpantayev@gmail.com", recipient_list)
+
+
+class FarmerProfile(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        # Get the farmer linked to the authenticated user
+        farmer = request.user.farmer_profile
+        if farmer is None:
+            return Response(
+                {"detail": "Farmer not found"}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Serialize the farmer's personal data
+        farmer_serializer = FarmerSerializer(farmer)
+
+        # Get the associated farm data (only name for now)
+        try:
+            farm = Farm.objects.get(farmer=farmer)
+            farm_data = {"name": farm.name}
+        except Farm.DoesNotExist:
+            farm_data = {}
+        # farm_data = {"name": Farm.objects.get(farmer=farmer).name}
+
+        return Response({"farmer": farmer_serializer.data, "farm": farm_data})
+
+    def patch(self, request):
+        # Get the farmer linked to the authenticated user
+        farmer = request.user.farmer_profile
+        if farmer is None:
+            return Response(
+                {"detail": "Farmer not found"}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Update the farmer's personal information
+        farmer_serializer = FarmerSerializer(farmer, data=request.data, partial=True)
+        if farmer_serializer.is_valid():
+            farmer_serializer.save()
+
+        # Initialize farm_name to handle cases where farm does not exist
+        farm_name = None
+
+        # If farm name is provided, update it
+        if "farm" in request.data and "name" in request.data["farm"]:
+            try:
+                # Attempt to retrieve the farm associated with the farmer
+                farm = Farm.objects.get(farmer=farmer)
+                farm.name = request.data["farm"]["name"]
+                farm.save()
+                farm_name = farm.name
+            except Farm.DoesNotExist:
+                # Handle case where no farm exists
+                farm_name = None
+
+        return Response({"farmer": farmer_serializer.data, "farm": {"name": farm_name}})
+
+
+class FarmManagementView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        """Retrieve farm details for the authenticated farmer."""
+        try:
+
+            farm = Farm.objects.get(farmer=request.user.farmer_profile)
+            serializer = FarmSerializer(farm)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Farm.DoesNotExist:
+            return Response(
+                {"error": "No farm associated with this user."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+    def patch(self, request):
+        """Add or update farm details for the authenticated farmer."""
+
+        farmer = request.user.farmer_profile
+        if farmer is None:
+            return Response(
+                {"detail": "Farmer not found"}, status=status.HTTP_404_NOT_FOUND
+            )
+        farm = get_object_or_404(Farm, farmer=farmer)
+        serializer = FarmSerializer(farm, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(
+                {"message": "Farm details updated successfully."},
+                status=status.HTTP_200_OK,
+            )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class FarmerUpdateAPIView(APIView):
@@ -354,6 +455,7 @@ class PendingFarmersAPIView(APIView):
     permission_classes = [IsAdmin]
 
     def get(self, request, id=None):
+        print("lol")
         # If `id` is provided, get a specific farmer, else list all pending farmers
         if id:
             try:
@@ -402,11 +504,14 @@ class PendingFarmersAPIView(APIView):
 @permission_classes([IsAuthenticatedOrReadOnly])
 def get_cart(request):
     if not request.user.is_authenticated:
-        return Response({"detail": "Authentication required."}, status=status.HTTP_401_UNAUTHORIZED)
+        return Response(
+            {"detail": "Authentication required."}, status=status.HTTP_401_UNAUTHORIZED
+        )
 
     cart, created = Cart.objects.get_or_create(buyer=request.user)
     serializer = CartSerializer(cart)
     return Response(serializer.data)
+
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticatedOrReadOnly])
@@ -455,13 +560,17 @@ def add_to_cart(request):
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
+
 @api_view(["POST"])
 @permission_classes([IsAuthenticatedOrReadOnly])
 def apply_promo_code(request):
     # Placeholder for promo code logic
     promo_code = request.data.get("promo_code")
     # Validate and apply promo code here
-    return Response({"detail": "Promo code applied successfully."}, status=status.HTTP_200_OK)
+    return Response(
+        {"detail": "Promo code applied successfully."}, status=status.HTTP_200_OK
+    )
+
 
 # @api_view(["POST"])
 # def create_farmer(request):

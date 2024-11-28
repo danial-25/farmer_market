@@ -31,4 +31,5 @@ urlpatterns = [
     path("buyers/cart/", views.get_cart, name="get_cart"),
     path("buyers/cart/add/", views.add_to_cart, name="add_to_cart"),
     path("buyers/cart/apply-promo/", views.apply_promo_code, name="apply_promo_code"),
+    path("buyer/info/", views.user_info),
 ]

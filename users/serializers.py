@@ -25,7 +25,7 @@ from .models import Cart, CartItem
 
 
 class BuyerSerializer(serializers.ModelSerializer):
-    user = serializers.DictField(write_only=True)  # Expect a dictionary for user data
+    # user = serializers.DictField(write_only=True)  # Expect a dictionary for user data
 
     class Meta:
         model = Buyer
@@ -49,13 +49,17 @@ class BuyerSerializer(serializers.ModelSerializer):
         instance.save()  # Save the updated instance
         return instance
 
+
 class CartItemSerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(source="product.name")
-    product_price = serializers.DecimalField(source="product.price", max_digits=10, decimal_places=2)
+    product_price = serializers.DecimalField(
+        source="product.price", max_digits=10, decimal_places=2
+    )
 
     class Meta:
         model = CartItem
         fields = ["id", "product_name", "product_price", "quantity", "total_price"]
+
 
 class CartSerializer(serializers.ModelSerializer):
     items = CartItemSerializer(many=True)
@@ -66,7 +70,15 @@ class CartSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Cart
-        fields = ["id", "items", "subtotal", "tax_and_fees", "delivery_fee", "total", 'created_at']
+        fields = [
+            "id",
+            "items",
+            "subtotal",
+            "tax_and_fees",
+            "delivery_fee",
+            "total",
+            "created_at",
+        ]
 
     def get_subtotal(self, obj):
         return obj.subtotal()
