@@ -1,7 +1,7 @@
 from django.shortcuts import render, get_object_or_404
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import status
+from rest_framework import status, generics
 from rest_framework.authtoken.models import Token
 from .serializers import *
 from products.serializers import *
@@ -570,6 +570,32 @@ def apply_promo_code(request):
     return Response(
         {"detail": "Promo code applied successfully."}, status=status.HTTP_200_OK
     )
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def place_order(request):
+    if request.method == 'POST':
+        # Pass the request context to the serializer
+        serializer = OrderSerializer(data=request.data, context={'request': request})
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class PlaceOrderView(generics.CreateAPIView):
+    serializer_class = OrderSerializer
+
+    def get_serializer_context(self):
+        # Ensure 'request' is passed in the context
+        context = super().get_serializer_context()
+        context['request'] = self.request  # Explicitly set the request
+        return context
+
+    def perform_create(self, serializer):
+        # You can pass the user explicitly as well when saving
+        user = self.request.user
+        serializer.save(buyer=user)
 
 
 # @api_view(["POST"])
