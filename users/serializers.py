@@ -95,17 +95,25 @@ class CartSerializer(serializers.ModelSerializer):
         return obj.total()
 
 class OrderItemSerializer(serializers.ModelSerializer):
+    prices = serializers.DecimalField(
+        source="product.price", max_digits=10, decimal_places=2, read_only=True
+    )
+
     class Meta:
         model = OrderItem
-        fields = ['product', 'quantity']
+        fields = ['product', 'quantity', "prices"]
 
 class OrderSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True)
+    total_price = serializers.SerializerMethodField()
 
     class Meta:
         model = Order
-        fields = ['id', 'buyer', 'delivery_details', 'items', 'total_price', 'is_completed']
-        read_only_fields = ['buyer', 'total_price', 'is_completed']
+        fields = ['id', 'buyer', 'delivery_details', 'items', 'total_price', 'is_completed', 'order_date']
+        read_only_fields = ['buyer', 'total_price', 'is_completed', 'status']
+
+    def get_total_price(self, obj):
+        return obj.calculate_total()
 
     def create(self, validated_data):
         # Access user from the context and safely create order

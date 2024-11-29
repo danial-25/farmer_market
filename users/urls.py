@@ -34,5 +34,7 @@ urlpatterns = [
     path("buyer/info/", views.user_info),
     path('buyers/place-order/', place_order, name='place_order'),
     path('buyers/place-order/<int:order_id>/track/', views.OrderTrackingView.as_view(), name='order-track'),
-    path('buyers/order/<int:order_id>/change-status/', views.ChangeOrderStatusView.as_view(), name='change_order_status')
+    path('buyers/order/<int:order_id>/change-status/', views.ChangeOrderStatusView.as_view(), name='change_order_status'),
+    path('buyers/order/history/', OrderHistoryView.as_view(), name='order-history')
+
 ]
