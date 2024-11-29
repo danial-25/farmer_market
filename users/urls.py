@@ -35,6 +35,9 @@ urlpatterns = [
     path('buyers/place-order/', place_order, name='place_order'),
     path('buyers/place-order/<int:order_id>/track/', views.OrderTrackingView.as_view(), name='order-track'),
     path('buyers/order/<int:order_id>/change-status/', views.ChangeOrderStatusView.as_view(), name='change_order_status'),
-    path('buyers/order/history/', OrderHistoryView.as_view(), name='order-history')
+    path('buyers/order/history/', OrderHistoryView.as_view(), name='order-history'),
 
+    path('farmers/delivery-options/', views.add_delivery_option, name='add_delivery_option'),
+    path('farmers/delivery-options/<int:pk>/', views.update_delivery_option, name='update_delivery_option'),
+    path('farmers/delivery-options/delete/<int:pk>/', views.delete_delivery_option, name='delete_delivery_option')
 ]

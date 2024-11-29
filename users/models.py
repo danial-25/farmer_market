@@ -17,6 +17,18 @@ class CustomUser(AbstractUser):
     ]
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, default="buyer")
 
+    @property
+    def is_farmer(self):
+        return self.role == "farmer"
+
+    @property
+    def is_buyer(self):
+        return self.role == "buyer"
+
+    @property
+    def is_admin(self):
+        return self.role == "admin"
+
 
 class Buyer(models.Model):
     user = models.OneToOneField(
@@ -69,12 +81,25 @@ class CartItem(models.Model):
     def total_price(self):
         return self.quantity * self.product.price  # Assuming Product has a `price` field
 
+class DeliveryOption(models.Model):
+    OPTION_TYPES = [
+        ('HOME_DELIVERY', 'Home Delivery'),
+        ('PICKUP_POINT', 'Pickup Point'),
+        ('THIRD_PARTY', 'Third-Party Delivery'),
+    ]
 
+    farmer = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="delivery_options")
+    option_type = models.CharField(max_length=50, choices=OPTION_TYPES)
+    details = models.TextField(blank=True, null=True)  # Additional info, e.g., pickup location
+
+    def __str__(self):
+        return f"{self.farmer.username} - {self.get_option_type_display()}"
 
 class Order(models.Model):
     buyer = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="orders")
     created_at = models.DateTimeField(auto_now_add=True)
     delivery_details = models.TextField()  # Capture delivery address or special instructions
+    delivery_option = models.ForeignKey(DeliveryOption, on_delete=models.SET_NULL, null=True, related_name="orders")
     is_completed = models.BooleanField(default=False)
     order_date = models.DateTimeField(auto_now_add=True)
 
