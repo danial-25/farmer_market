@@ -246,7 +246,6 @@ def update_product(request, product_id):
     serializer = ProductCreateSerializer(product, data=request.data, partial=True)
     if serializer.is_valid():
         serializer.save()  # Save the updated product
-        print("yo")
         return Response(
             {"message": "Product updated successfully.", "product": serializer.data},
             status=status.HTTP_200_OK,

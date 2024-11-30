@@ -5,6 +5,7 @@
 #         model = Buyer
 #         fields = ('id', 'user', 'delivery_address', 'contact_number')
 from requests import Response
+
 #     def create(self, validated_data):
 #         user_data = validated_data.pop('user')
 #         user = CustomUser.objects.create_user(
@@ -27,7 +28,7 @@ from .models import Cart, CartItem
 
 
 class BuyerSerializer(serializers.ModelSerializer):
-    # user = serializers.DictField(write_only=True)  # Expect a dictionary for user data
+    user = serializers.DictField(write_only=True)  # Expect a dictionary for user data
 
     class Meta:
         model = Buyer
@@ -50,6 +51,11 @@ class BuyerSerializer(serializers.ModelSerializer):
             setattr(instance, attr, value)
         instance.save()  # Save the updated instance
         return instance
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        representation["user"] = instance.user.id if instance.user else None
+        return representation
 
 
 class CartItemSerializer(serializers.ModelSerializer):
@@ -94,6 +100,7 @@ class CartSerializer(serializers.ModelSerializer):
     def get_total(self, obj):
         return obj.total()
 
+
 class OrderItemSerializer(serializers.ModelSerializer):
     prices = serializers.DecimalField(
         source="product.price", max_digits=10, decimal_places=2, read_only=True
@@ -101,7 +108,8 @@ class OrderItemSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = OrderItem
-        fields = ['product', 'quantity', "prices"]
+        fields = ["product", "quantity", "prices"]
+
 
 class OrderSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True)
@@ -109,19 +117,27 @@ class OrderSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Order
-        fields = ['id', 'buyer', 'delivery_details', 'items', 'total_price', 'is_completed', 'order_date']
-        read_only_fields = ['buyer', 'total_price', 'is_completed', 'status']
+        fields = [
+            "id",
+            "buyer",
+            "delivery_details",
+            "items",
+            "total_price",
+            "is_completed",
+            "order_date",
+        ]
+        read_only_fields = ["buyer", "total_price", "is_completed", "status"]
 
     def get_total_price(self, obj):
         return obj.calculate_total()
 
     def create(self, validated_data):
         # Access user from the context and safely create order
-        user = self.context.get('request').user
+        user = self.context.get("request").user
         if not user:
             raise serializers.ValidationError("User not found in request context.")
 
-        items_data = validated_data.pop('items')
+        items_data = validated_data.pop("items")
         order = Order.objects.create(buyer=user, **validated_data)
 
         # Add order items
@@ -131,6 +147,7 @@ class OrderSerializer(serializers.ModelSerializer):
         # Calculate total price
         order.calculate_total()
         return order
+
 
 # class FarmerSerializer(serializers.ModelSerializer):
 #     class Meta:
