@@ -365,13 +365,17 @@ def list_farmers(request):
     # Add user details dynamically to the serialized farmers
     for farmer_data, farmer_instance in zip(serialized_farmers, farmers):
         user = farmer_instance.user
-        farmer_data["user"] = {
-            "id": user.id,
-            "username": user.username,
-            "email": user.email,
-            "role": user.role,  # Assuming 'role' exists on the CustomUser model
-            "is_active": user.is_active,
-        }
+        # user = farmer_instance.user
+        if user:
+            farmer_data["user"] = {
+                "id": user.id,
+                "username": user.username,
+                "email": user.email,
+                "role": user.role,  # Assuming 'role' exists on the CustomUser model
+                "is_active": user.is_active,
+            }
+        else:
+            farmer_data["user"] = None
 
     return Response(serialized_farmers)
     # return render(request, 'templates/admin/list_farmers.html', {'farmers': farmers})
@@ -572,17 +576,19 @@ def apply_promo_code(request):
         {"detail": "Promo code applied successfully."}, status=status.HTTP_200_OK
     )
 
-@api_view(['POST'])
+
+@api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def place_order(request):
-    if request.method == 'POST':
+    if request.method == "POST":
         # Pass the request context to the serializer
-        serializer = OrderSerializer(data=request.data, context={'request': request})
+        serializer = OrderSerializer(data=request.data, context={"request": request})
 
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 class PlaceOrderView(generics.CreateAPIView):
     serializer_class = OrderSerializer
@@ -590,7 +596,7 @@ class PlaceOrderView(generics.CreateAPIView):
     def get_serializer_context(self):
         # Ensure 'request' is passed in the context
         context = super().get_serializer_context()
-        context['request'] = self.request  # Explicitly set the request
+        context["request"] = self.request  # Explicitly set the request
         return context
 
     def perform_create(self, serializer):
@@ -601,29 +607,33 @@ class PlaceOrderView(generics.CreateAPIView):
         order.calculate_total()  # This will update the total_price field
         order.save()
 
+
 class OrderTrackingView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, order_id):
         try:
             order = Order.objects.get(id=order_id)
-            return Response({
-                'order_id': order.id,
-                'status': order.status,
-                'total_price': order.total_price,
-            })
+            return Response(
+                {
+                    "order_id": order.id,
+                    "status": order.status,
+                    "total_price": order.total_price,
+                }
+            )
         except Order.DoesNotExist:
             return Response({"error": "Order not found"}, status=404)
 
 
 logger = logging.getLogger(__name__)
 
+
 class ChangeOrderStatusView(APIView):
     permission_classes = [IsAuthenticated]
 
     def put(self, request, order_id):
         order = Order.objects.get(id=order_id)
-        status = request.data.get('status')
+        status = request.data.get("status")
 
         # Update the order status
         order.status = status
@@ -632,9 +642,9 @@ class ChangeOrderStatusView(APIView):
         # Send the email notification
         try:
             send_mail(
-                'Order Status Update',
-                f'Your order {order_id} status is now: {status}.',
-                os.getenv('EMAIL_HOST_USER'),
+                "Order Status Update",
+                f"Your order {order_id} status is now: {status}.",
+                os.getenv("EMAIL_HOST_USER"),
                 [order.buyer.email],  # Assuming the buyer is linked to the order
                 fail_silently=False,
             )
@@ -644,6 +654,7 @@ class ChangeOrderStatusView(APIView):
 
         return Response({"message": "Order status updated and notification sent."})
 
+
 class OrderHistoryView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -652,12 +663,15 @@ class OrderHistoryView(APIView):
         buyer = request.user
 
         # Filter orders by the buyer (user)
-        orders = Order.objects.filter(buyer=buyer).order_by('-order_date')  # Order by most recent
+        orders = Order.objects.filter(buyer=buyer).order_by(
+            "-order_date"
+        )  # Order by most recent
 
         # Serialize the order data
         serializer = OrderSerializer(orders, many=True)
 
         return Response(serializer.data)
+
 
 # @api_view(["POST"])
 # def create_farmer(request):
