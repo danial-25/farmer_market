@@ -445,13 +445,16 @@ def list_buyers(request):
     # Add user details dynamically to the serialized buyers
     for buyer_data, buyer_instance in zip(serialized_buyers, buyers):
         user = buyer_instance.user
-        buyer_data["user"] = {
-            "id": user.id,
-            "username": user.username,
-            "email": user.email,
-            "role": user.role,  # Assuming 'role' exists on the CustomUser model
-            "is_active": user.is_active,
-        }
+        if user:
+            buyer_data["user"] = {
+                "id": user.id,
+                "username": user.username,
+                "email": user.email,
+                "role": user.role,  # Assuming 'role' exists on the CustomUser model
+                "is_active": user.is_active,
+            }
+        else:
+            buyer_data["user"] =None            
 
     return Response(serialized_buyers)
 
@@ -460,7 +463,6 @@ class PendingFarmersAPIView(APIView):
     permission_classes = [IsAdmin]
 
     def get(self, request, id=None):
-        print("lol")
         # If `id` is provided, get a specific farmer, else list all pending farmers
         if id:
             try:

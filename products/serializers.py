@@ -21,8 +21,8 @@ class FarmSerializer(serializers.ModelSerializer):
 
 
 class FarmerSerializer(serializers.ModelSerializer):
-    # user = serializers.DictField(write_only=True)
-
+    user = serializers.DictField(write_only=True)
+    # user = serializers.JSONField(write_only=True)
     class Meta:
         model = Farmer
         fields = ["id", "name", "location", "contact_info", "profile_picture", "user"]
@@ -44,6 +44,11 @@ class FarmerSerializer(serializers.ModelSerializer):
             setattr(instance, attr, value)
         instance.save()  # Save the updated instance
         return instance
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        representation['user'] = instance.user.id if instance.user else None  
+        return representation
+
 
 
 class CategorySerializer(serializers.ModelSerializer):
