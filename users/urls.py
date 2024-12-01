@@ -39,5 +39,6 @@ urlpatterns = [
 
     path('farmers/delivery-options/', views.add_delivery_option, name='add_delivery_option'),
     path('farmers/delivery-options/<int:pk>/', views.update_delivery_option, name='update_delivery_option'),
-    path('farmers/delivery-options/delete/<int:pk>/', views.delete_delivery_option, name='delete_delivery_option')
+    path('farmers/delivery-options/delete/<int:pk>/', views.delete_delivery_option, name='delete_delivery_option'),
+    path('farmers/sales-report/', sales_report, name='farmers/sales_report'),
 ]
