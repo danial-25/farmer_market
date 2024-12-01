@@ -9,11 +9,13 @@ from rest_framework.renderers import JSONRenderer, TemplateHTMLRenderer
 from rest_framework.reverse import reverse, reverse_lazy
 from .serializers import *
 from rest_framework import status, viewsets
-
+from django.http import JsonResponse, HttpResponse
 from .forms import ProductForm
 from django.core.exceptions import SuspiciousFileOperation
 from django.core.files.storage import FileSystemStorage
-
+from xhtml2pdf import pisa
+from django.template.loader import get_template
+from io import BytesIO
 
 def try_get_image_url(product):
     """
@@ -253,3 +255,91 @@ def update_product(request, product_id):
         )
     else:
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+
+def inventory_report(request):
+    # Retrieve start and end date from GET request
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+    
+    # Filter products by date range if provided
+    products = Product.objects.all()
+    if start_date and end_date:
+        products = products.filter(date_added__gte=start_date, date_added__lte=end_date)
+    
+    # Process data to calculate low stock items and turnover rate
+    report_data = process_inventory_data(products)
+    
+    # If "download" is specified in query parameters, return CSV or PDF
+    if 'download' in request.GET:
+        report_format = request.GET.get('format', 'pdf')
+        if report_format == 'csv':
+            return generate_csv_report(report_data)
+        elif report_format == 'pdf':
+            return generate_pdf_report(report_data)
+    
+    # If no download is requested, return data as JSON
+    return JsonResponse(report_data)
+
+# Helper function to process inventory data
+def process_inventory_data(products):
+    """ Process product data to identify low stock items and calculate turnover rate """
+    low_stock_items = []
+    total_available = 0
+    total_sales = 0
+    
+    for product in products:
+        if product.quantity_available < product.low_stock_threshold:
+            low_stock_items.append({
+                'name': product.name,
+                'quantity_available': product.quantity_available,
+                'low_stock_threshold': product.low_stock_threshold,
+            })
+        
+        total_available += product.quantity_available
+        total_sales += product.popularity  # Example: 'popularity' can represent sales
+
+    turnover_rate = total_sales / total_available if total_available else 0
+
+    return {
+        'low_stock_items': low_stock_items,
+        'turnover_rate': turnover_rate
+    }
+
+# Function to generate PDF report
+def generate_pdf_report(report_data):
+    """ Generate PDF file from the report data """
+    low_stock_items = report_data['low_stock_items']
+    
+    # Check if data exists and is non-empty
+    if not low_stock_items:
+        return HttpResponse("No data to generate PDF", status=400)
+    
+    buffer = io.BytesIO()
+    p = canvas.Canvas(buffer, pagesize=letter)
+    p.drawString(100, 750, "Inventory Report - Low Stock Items")
+
+    y_position = 730
+    for item in low_stock_items:
+        # Debugging: Ensure data is being passed correctly
+        print(f"Generating PDF for: {item['name']} with Available: {item['quantity_available']} and Threshold: {item['low_stock_threshold']}")
+        
+        # Drawing the data onto the PDF
+        p.drawString(100, y_position, f"Name: {item['name']}, Available: {item['quantity_available']}, Threshold: {item['low_stock_threshold']}")
+        y_position -= 20
+
+        # Check for page overflow
+        if y_position < 50:
+            p.showPage()  # Create a new page if overflow
+            p.drawString(100, 750, "Inventory Report - Low Stock Items")
+            y_position = 730
+    
+    p.showPage()
+    p.save()
+
+    buffer.seek(0)
+    response = HttpResponse(buffer, content_type='application/pdf')
+    response['Content-Disposition'] = 'attachment; filename="inventory_report.pdf"'
+    return response
