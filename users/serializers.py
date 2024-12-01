@@ -19,7 +19,7 @@ from requests import Response
 from rest_framework import serializers, status
 from rest_framework.views import APIView
 
-from .models import Buyer, OrderItem, Order, DeliveryOption
+from .models import Buyer, OrderItem, Order
 from users.models import CustomUser
 from .models import Cart, CartItem
 
@@ -109,7 +109,7 @@ class OrderSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Order
-        fields = ['id', 'buyer', 'delivery_details', 'delivery_option', 'items', 'total_price', 'is_completed', 'order_date']
+        fields = ['id', 'buyer', 'delivery_details', 'items', 'total_price', 'is_completed', 'order_date']
         read_only_fields = ['buyer', 'total_price', 'is_completed', 'status']
 
     def get_total_price(self, obj):
@@ -132,10 +132,7 @@ class OrderSerializer(serializers.ModelSerializer):
         order.calculate_total()
         return order
 
-class DeliveryOptionSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = DeliveryOption
-        fields = ['id', 'option_type', 'details']
+
 
 
 # class FarmerSerializer(serializers.ModelSerializer):

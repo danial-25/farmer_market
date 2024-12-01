@@ -659,43 +659,7 @@ class OrderHistoryView(APIView):
 
         return Response(serializer.data)
 
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def add_delivery_option(request):
-    farmer = request.user
-    if not farmer.is_farmer:
-        return Response({"error": "Only farmers can add delivery options."}, status=status.HTTP_403_FORBIDDEN)
 
-    serializer = DeliveryOptionSerializer(data=request.data)
-    if serializer.is_valid():
-        serializer.save(farmer=farmer)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-@api_view(['DELETE'])
-@permission_classes([IsAuthenticated])
-def delete_delivery_option(request, pk):
-    try:
-        delivery_option = DeliveryOption.objects.get(id=pk, farmer=request.user)
-    except DeliveryOption.DoesNotExist:
-        return Response({"error": "Delivery option not found or unauthorized."}, status=status.HTTP_404_NOT_FOUND)
-
-    delivery_option.delete()
-    return Response({"message": "Delivery option deleted successfully."}, status=status.HTTP_200_OK)
-
-@api_view(['PUT'])
-@permission_classes([IsAuthenticated])
-def update_delivery_option(request, pk):
-    try:
-        delivery_option = DeliveryOption.objects.get(id=pk, farmer=request.user)
-    except DeliveryOption.DoesNotExist:
-        return Response({"error": "Delivery option not found or unauthorized."}, status=status.HTTP_404_NOT_FOUND)
-
-    serializer = DeliveryOptionSerializer(delivery_option, data=request.data, partial=True)
-    if serializer.is_valid():
-        serializer.save()
-        return Response(serializer.data, status=status.HTTP_200_OK)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 # @api_view(["POST"])
 # def create_farmer(request):
