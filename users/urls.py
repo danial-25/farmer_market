@@ -32,9 +32,17 @@ urlpatterns = [
     path("buyers/cart/add/", views.add_to_cart, name="add_to_cart"),
     path("buyers/cart/apply-promo/", views.apply_promo_code, name="apply_promo_code"),
     path("buyer/info/", views.user_info),
-    path('buyers/place-order/', place_order, name='place_order'),
-    path('buyers/place-order/<int:order_id>/track/', views.OrderTrackingView.as_view(), name='order-track'),
-    path('buyers/order/<int:order_id>/change-status/', views.ChangeOrderStatusView.as_view(), name='change_order_status'),
-    path('buyers/order/history/', OrderHistoryView.as_view(), name='order-history')
-
+    path("buyers/place-order/", place_order, name="place_order"),
+    path(
+        "buyers/place-order/<int:order_id>/track/",
+        views.OrderTrackingView.as_view(),
+        name="order-track",
+    ),
+    path(
+        "buyers/order/<int:order_id>/change-status/",
+        views.ChangeOrderStatusView.as_view(),
+        name="change_order_status",
+    ),
+    path("buyers/order/history/", OrderHistoryView.as_view(), name="order-history"),
+    path("farmers/sales-report/", views.sales_report, name="farmers/sales_report"),
 ]
