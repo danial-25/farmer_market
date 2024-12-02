@@ -15,7 +15,8 @@ from django.contrib.auth import authenticate
 from rest_framework.permissions import AllowAny
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.permissions import AllowAny, IsAuthenticatedOrReadOnly
-
+from django.db.models.functions import TruncWeek, TruncMonth
+from .models import Order, OrderItem
 # from rest_framework.permissions import IsAdmin
 
 from rest_framework.decorators import action
@@ -678,6 +679,7 @@ class OrderHistoryView(APIView):
         return Response(serializer.data)
 
 
+
 # @api_view(["POST"])
 # def create_farmer(request):
 #     serializer = FarmerSerializer(data=request.data)
@@ -710,109 +712,111 @@ class OrderHistoryView(APIView):
 #         return Response({"error": "You are not a farmer."}, status=403)
 
 
-# def daterange(start_date, end_date):
-#     """Generate a list of dates between start_date and end_date."""
-#     for n in range(int((end_date - start_date).days) + 1):
-#         yield start_date + timedelta(n)
-
-# def week_range(start_date, end_date):
-#     current = start_date
-#     while current <= end_date:
-#         yield current
-#         current += timedelta(weeks=1)
-
-# # Generate all months between two dates
-# def month_range(start_date, end_date):
-#     current = start_date.replace(day=1)
-#     while current <= end_date.replace(day=1):
-#         yield current
-#         # Move to the next month
-#         if current.month == 12:
-#             current = current.replace(year=current.year + 1, month=1)
-#         else:
-#             current = current.replace(month=current.month + 1)
-
-# def sales_report(request):
-#     try:
-#         # Get query parameters
-#         start_date = request.GET.get('start_date')
-#         end_date = request.GET.get('end_date')
-#         report_type = request.GET.get('report_type', 'daily')  # Default to daily
-
-#         if not start_date or not end_date:
-#             return JsonResponse({"error": "Start date and end date are required."}, status=400)
-
-#         # Parse dates
-#         start_date = datetime.strptime(start_date, "%Y-%m-%d").date()
-#         end_date = datetime.strptime(end_date, "%Y-%m-%d").date()
-
-#         # Filter completed orders within the date range
-#         orders = Order.objects.filter(order_date__range=[start_date, end_date], is_completed=True)
-
-#         # Aggregate data
-#         if report_type == 'daily':
-#             orders = orders.extra({'day': "date(order_date)"}).values('day').annotate(
-#                 revenue=Sum(F('items__quantity') * F('items__product__price')),
-#                 total_orders=Count('id'),
-#             )
-#             # Convert to dictionary for easy access
-#             order_dict = {order['day']: order for order in orders}
-#             # Fill missing days with zero data
-#             report = [
-#                 {
-#                     "day": single_date.strftime("%Y-%m-%d"),
-#                     "revenue": order_dict.get(single_date, {}).get("revenue", 0),
-#                     "total_orders": order_dict.get(single_date, {}).get("total_orders", 0),
-#                 }
-#                 for single_date in daterange(start_date, end_date)
-#             ]
-#         elif report_type == 'weekly':
-
-#             orders = (
-#                 orders.annotate(week=TruncWeek('order_date'))
-#                 .values('week')
-#                 .annotate(
-#                     revenue=Sum(F('items__quantity') * F('items__product__price')),
-#                     total_orders=Count('id'),
-#                 )
-#             )
-#             # Convert to dictionary for easy lookup
-#             order_dict = {entry["week"].strftime("%Y-%W"): entry for entry in orders}
-
-#             # Generate full week range and fill missing data
-#             report = [
-#                 {
-#                     "week": single_week.strftime("%Y-%W"),
-#                     "revenue": order_dict.get(single_week.strftime("%Y-%W"), {}).get("revenue", 0),
-#                     "total_orders": order_dict.get(single_week.strftime("%Y-%W"), {}).get("total_orders", 0),
-#                 }
-#                 for single_week in week_range(start_date, end_date)
-#             ]
 
 
-#         elif report_type == 'monthly':
-#             # Group by month
-#             orders = (
-#                 orders.annotate(month=TruncMonth('order_date'))
-#                 .values('month')
-#                 .annotate(
-#                     revenue=Sum(F('items__quantity') * F('items__product__price')),
-#                     total_orders=Count('id'),
-#                 )
-#             )
-#             order_dict = {entry["month"].strftime("%Y-%m"): entry for entry in orders}
+def daterange(start_date, end_date):
+    """Generate a list of dates between start_date and end_date."""
+    for n in range(int((end_date - start_date).days) + 1):
+        yield start_date + timedelta(n)
+
+def week_range(start_date, end_date):
+    current = start_date
+    while current <= end_date:
+        yield current
+        current += timedelta(weeks=1)
+
+# Generate all months between two dates
+def month_range(start_date, end_date):
+    current = start_date.replace(day=1)
+    while current <= end_date.replace(day=1):
+        yield current
+        # Move to the next month
+        if current.month == 12:
+            current = current.replace(year=current.year + 1, month=1)
+        else:
+            current = current.replace(month=current.month + 1)
+
+def sales_report(request):
+    try:
+        # Get query parameters
+        start_date = request.GET.get('start_date')
+        end_date = request.GET.get('end_date')
+        report_type = request.GET.get('report_type', 'daily')  # Default to daily
+
+        if not start_date or not end_date:
+            return JsonResponse({"error": "Start date and end date are required."}, status=400)
+
+        # Parse dates
+        start_date = datetime.strptime(start_date, "%Y-%m-%d").date()
+        end_date = datetime.strptime(end_date, "%Y-%m-%d").date()
+
+        # Filter completed orders within the date range
+        orders = Order.objects.filter(order_date__range=[start_date, end_date], is_completed=True)
+
+        # Aggregate data
+        if report_type == 'daily':
+            orders = orders.extra({'day': "date(order_date)"}).values('day').annotate(
+                revenue=Sum(F('items__quantity') * F('items__product__price')),
+                total_orders=Count('id'),
+            )
+            # Convert to dictionary for easy access
+            order_dict = {order['day']: order for order in orders}
+            # Fill missing days with zero data
+            report = [
+                {
+                    "day": single_date.strftime("%Y-%m-%d"),
+                    "revenue": order_dict.get(single_date, {}).get("revenue", 0),
+                    "total_orders": order_dict.get(single_date, {}).get("total_orders", 0),
+                }
+                for single_date in daterange(start_date, end_date)
+            ]
+        elif report_type == 'weekly':
+
+            orders = (
+                orders.annotate(week=TruncWeek('order_date'))
+                .values('week')
+                .annotate(
+                    revenue=Sum(F('items__quantity') * F('items__product__price')),
+                    total_orders=Count('id'),
+                )
+            )
+            # Convert to dictionary for easy lookup
+            order_dict = {entry["week"].strftime("%Y-%W"): entry for entry in orders}
+
+            # Generate full week range and fill missing data
+            report = [
+                {
+                    "week": single_week.strftime("%Y-%W"),
+                    "revenue": order_dict.get(single_week.strftime("%Y-%W"), {}).get("revenue", 0),
+                    "total_orders": order_dict.get(single_week.strftime("%Y-%W"), {}).get("total_orders", 0),
+                }
+                for single_week in week_range(start_date, end_date)
+            ]
+
+
+        elif report_type == 'monthly':
+            # Group by month
+            orders = (
+                orders.annotate(month=TruncMonth('order_date'))
+                .values('month')
+                .annotate(
+                    revenue=Sum(F('items__quantity') * F('items__product__price')),
+                    total_orders=Count('id'),
+                )
+            )
+            order_dict = {entry["month"].strftime("%Y-%m"): entry for entry in orders}
 
        
-#             report = [
-#                 {
-#                     "month": single_month.strftime("%Y-%m"),
-#                     "revenue": order_dict.get(single_month.strftime("%Y-%m"), {}).get("revenue", 0),
-#                     "total_orders": order_dict.get(single_month.strftime("%Y-%m"), {}).get("total_orders", 0),
-#                 }
-#                 for single_month in month_range(start_date, end_date)
-#             ]
+            report = [
+                {
+                    "month": single_month.strftime("%Y-%m"),
+                    "revenue": order_dict.get(single_month.strftime("%Y-%m"), {}).get("revenue", 0),
+                    "total_orders": order_dict.get(single_month.strftime("%Y-%m"), {}).get("total_orders", 0),
+                }
+                for single_month in month_range(start_date, end_date)
+            ]
 
 
-#         return JsonResponse({"report": report}, safe=False)
-#     except Exception as e:
-#         return JsonResponse({"error": str(e)}, status=500)
+        return JsonResponse({"report": report}, safe=False)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)

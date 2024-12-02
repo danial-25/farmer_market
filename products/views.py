@@ -9,11 +9,9 @@ from rest_framework.renderers import JSONRenderer, TemplateHTMLRenderer
 from rest_framework.reverse import reverse, reverse_lazy
 from .serializers import *
 from rest_framework import status, viewsets
-
+from django.http import JsonResponse, HttpResponse
 from .forms import ProductForm
 from django.core.exceptions import SuspiciousFileOperation
-from django.core.files.storage import FileSystemStorage
-
 from django.core.files.storage import FileSystemStorage
 from xhtml2pdf import pisa
 from django.template.loader import get_template
@@ -256,7 +254,9 @@ def update_product(request, product_id):
         )
     else:
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+
+
+
 
 def inventory_report(request):
     # Retrieve start and end date from GET request
